@@ -29,6 +29,8 @@ class BleClient(context: Context?) : AbsBle(context) {
     private val isScanning = AtomicBoolean(false)
     private var gattChar:ClientGattChar? = null
     fun startScan(listener: IBleClientListener) {
+        //先关闭之前的连接
+        gattChar?.release()
         this.listener = listener
         if (!checkPermission(listener)) {
             return

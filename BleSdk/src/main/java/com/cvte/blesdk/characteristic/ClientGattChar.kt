@@ -103,8 +103,8 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
     override fun release() {
         super.release()
         blueGatt?.let {
-            it.disconnect()
             it.close()
+            it.disconnect()
         }
         blueGatt = null
     }
