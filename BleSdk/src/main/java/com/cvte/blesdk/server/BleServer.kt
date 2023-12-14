@@ -5,6 +5,9 @@ import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
 import android.os.Build
+import android.util.Log
+import androidx.core.util.forEach
+import androidx.core.util.size
 import com.cvte.blesdk.BleError
 import com.cvte.blesdk.GattStatus
 import com.cvte.blesdk.abs.AbsBle
@@ -12,6 +15,7 @@ import com.cvte.blesdk.abs.IBle
 import com.cvte.blesdk.characteristic.AbsCharacteristic
 import com.cvte.blesdk.characteristic.ServerGattChar
 import com.cvte.blesdk.utils.BleUtil
+import java.nio.ByteBuffer
 
 /**
  * @author by zhengshaorui 2023/12/12
@@ -21,6 +25,7 @@ class BleServer(context: Context?) :AbsBle(context){
     companion object{
         private const val TAG = "BleServer"
         private const val MAX_NAME_SIZE = 20
+        private const val MAX_MTU_SIZE = 512
     }
     private var gattServer: ServerGattChar? = null
     private var listener:IBleServerCallback? = null
@@ -70,8 +75,23 @@ class BleServer(context: Context?) :AbsBle(context){
 
     }
 
-    override fun send(toByteArray: ByteArray) {
-        gattServer?.send(toByteArray)
+    override fun send(data: ByteArray) {
+        val subpackage = BleUtil.subpackage(data, 19)
+        //todo 分包时，可以抽象类，先发大小，再发数据
+        if (subpackage.size > 1){
+            gattServer?.send("_len${data.size}".toByteArray())
+            gattServer?.send("_count${subpackage.size}".toByteArray())
+        }
+        val buffer = ByteBuffer.allocate(data.size)
+        subpackage.forEach {key,value->
+            gattServer?.send(value)
+            Log.d(TAG, "zsr send: $key,${value.size}")
+            buffer.put(value)
+        }
+        Log.d(TAG, "zsr send data:${String(buffer.array())}")
+       /* subpackage.forEach { key, value ->
+            gattServer?.send(value)
+        }*/
     }
 
     fun closeServer() {
@@ -113,6 +133,7 @@ class BleServer(context: Context?) :AbsBle(context){
 
         override fun onStartFailure(errorCode: Int) {
             super.onStartFailure(errorCode)
+            closeServer()
             when (errorCode) {
                 ADVERTISE_FAILED_DATA_TOO_LARGE -> {
                     listener?.onFail(BleError.ADVERTISE_FAILED,"advertise data too large,over 31 bytes")

@@ -11,6 +11,8 @@ import com.cvte.blesdk.GattStatus
 import com.cvte.blesdk.UUID_READ_NOTIFY
 import com.cvte.blesdk.UUID_SERVICE
 import com.cvte.blesdk.UUID_WRITE
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 
 /**
  * @author by zhengshaorui 2023/12/14
@@ -49,6 +51,9 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         }
     }
 
+    private var count = 0
+    private var max = 0
+    private var buffer:ByteBuffer? = null
     override fun onClientRead(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?) {
         super.onClientRead(gatt, characteristic)
         characteristic?.let {
@@ -57,8 +62,33 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
                 if (msg == "over") {
                     gatt?.close()
                     listener.onEvent(GattStatus.CLIENT_DISCONNECTED, gatt?.device?.name)
-                } else {
-                    listener.onEvent(GattStatus.CLIENT_READ, msg)
+                } else if (msg.startsWith("_len")) {
+
+                    val size  = msg.substring(4, msg.length).toInt()
+                    buffer = ByteBuffer.allocate(size)
+                    listener.onEvent(GattStatus.CLIENT_READ, "收到服务端消息长度：$size")
+                } else if (msg.startsWith("_count")){
+                    count = 0
+                    max = msg.substring(6, msg.length).toInt()
+                    listener.onEvent(GattStatus.CLIENT_READ, "收到服务端消息包大小：$max")
+                }else {
+                    // listener.onEvent(GattStatus.CLIENT_READ, msg)
+                    buffer?.let {
+                        count++
+                        Log.d(TAG, "zsr onClientRead: $count,${value.size}")
+                        it.put(value)
+                        if (count >= max){
+                            listener.onEvent(GattStatus.CLIENT_READ, String(it.array()) )
+                        }
+                    }
+                    /*Log.d(TAG, "zsr onClientRead: $bu")
+                    if (count <= max){
+                       // datas.add(value)
+                        buffer?.put(value)
+                    }else{
+                        listener.onEvent(GattStatus.CLIENT_READ, buffer?.array()?.let { String(it) })
+                    }*/
+
                 }
             }
         }

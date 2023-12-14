@@ -6,15 +6,15 @@
 package com.cvte.blesdk.utils
 
 import android.Manifest
-import android.annotation.SuppressLint
-import android.bluetooth.le.ScanResult
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
+import android.util.Log
 import android.util.SparseArray
 import androidx.annotation.RequiresApi
-import kotlin.math.roundToInt
+import java.util.LinkedList
+import java.util.Queue
 
 
 /**
@@ -109,22 +109,35 @@ object BleUtil {
         return context?.packageManager?.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)?: false
     }
 
-    /**
-     * ScanResult转BleDevice
-     */
-    @SuppressLint("MissingPermission")
-   /* fun scanResultToBleDevice(scanResult: ScanResult): BleDevice {
-        return BleDevice(
-            deviceInfo = scanResult.device,
-            deviceName = scanResult.device?.name,
-            deviceAddress = scanResult.device?.address,
-            rssi = scanResult.rssi,
-            timestampNanos = scanResult.timestampNanos,
-            scanRecord = scanResult.scanRecord?.bytes,
-            tag = null
-        )
-    }*/
 
+
+    /**
+     * 分包
+     * @param data 需要分别的数据
+     * @param packageLength 每个数据包最大长度
+     */
+    fun subpackage(data: ByteArray, packageLength: Int): SparseArray<ByteArray> {
+        val subpackages = SparseArray<ByteArray>()
+        var offset = 0
+        var packageId = 0
+
+        while (offset < data.size) {
+            val length = if (offset + packageLength <= data.size) {
+                packageLength
+            } else {
+                data.size - offset
+            }
+
+            val subpackage = ByteArray(length)
+            System.arraycopy(data, offset, subpackage, 0, length)
+            subpackages.put(packageId, subpackage)
+            Log.d("TAG", "zsr subpackage: $packageId,$length")
+            offset += packageLength
+            packageId++
+        }
+
+        return subpackages
+    }
     /**
      * 字节数组转16进制字符串
      *
@@ -149,52 +162,37 @@ object BleUtil {
         }
         return sb.toString()
     }
-
     /**
      * 分包
      * @param data 需要分别的数据
      * @param packageLength 每个数据包最大长度
      */
-    fun subpackage(data: ByteArray, packageLength: Int): SparseArray<ByteArray> {
-        val listData: SparseArray<ByteArray>
-        if (data.size > packageLength) {
-            val pkgCount = if (data.size % packageLength == 0) {
-                data.size / packageLength
-            } else {
-                (data.size / packageLength + 1).toFloat().roundToInt()
-            }
-            listData = SparseArray<ByteArray>(pkgCount)
+     fun splitByte(data: ByteArray, count: Int): Queue<ByteArray> {
+
+        val byteQueue: Queue<ByteArray> = LinkedList()
+        val pkgCount: Int
+        pkgCount = if (data.size % count == 0) {
+            data.size / count
+        } else {
+            Math.round((data.size / count + 1).toFloat())
+        }
+        if (pkgCount > 0) {
             for (i in 0 until pkgCount) {
                 var dataPkg: ByteArray
-                var length: Int
+                var j: Int
                 if (pkgCount == 1 || i == pkgCount - 1) {
-                    length = if (data.size % packageLength == 0) {
-                        packageLength
-                    } else {
-                        data.size % packageLength
-                    }
-                    System.arraycopy(
-                        data,
-                        i * packageLength,
-                        ByteArray(length).also { dataPkg = it },
-                        0,
-                        length
-                    )
+                    j = if (data.size % count == 0) count else data.size % count
+                    System.arraycopy(data, i * count, ByteArray(j).also {
+                        dataPkg = it
+                    }, 0, j)
                 } else {
-                    System.arraycopy(
-                        data,
-                        i * packageLength,
-                        ByteArray(packageLength).also { dataPkg = it },
-                        0,
-                        packageLength
-                    )
+                    System.arraycopy(data, i * count, ByteArray(count).also {
+                        dataPkg = it
+                    }, 0, count)
                 }
-                listData.put(i, dataPkg)
+                byteQueue.offer(dataPkg)
             }
-        } else {
-            listData = SparseArray<ByteArray>(1)
-            listData.put(0, data)
         }
-        return listData
+        return byteQueue
     }
 }

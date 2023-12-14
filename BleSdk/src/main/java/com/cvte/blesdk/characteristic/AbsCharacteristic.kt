@@ -122,7 +122,6 @@ abstract class AbsCharacteristic(val listener: IGattListener,tag:String) {
 
         override fun onNotificationSent(device: BluetoothDevice?, status: Int) {
             super.onNotificationSent(device, status)
-            Log.d(TAG, "onNotificationSent() called with: device = $device, status = $status")
         }
 
         override fun onMtuChanged(device: BluetoothDevice?, mtu: Int) {

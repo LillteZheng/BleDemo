@@ -13,6 +13,10 @@ import com.cvte.blesdk.BleError
 import com.cvte.blesdk.BleSdk
 import com.cvte.blesdk.server.BleServer
 import com.zhengsr.bledemo.databinding.ActivityServerBinding
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 
 class ServerActivity : AppCompatActivity() {
     companion object{
@@ -30,6 +34,7 @@ class ServerActivity : AppCompatActivity() {
             Manifest.permission.BLUETOOTH_CONNECT,
             Manifest.permission.BLUETOOTH_ADVERTISE,
             Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
             ), 1)
 
 
@@ -78,8 +83,22 @@ class ServerActivity : AppCompatActivity() {
 
     fun send(view: View) {
        // BleSdk.getServer().closeServer()
-        BleSdk.getServer().send("hello world".toByteArray())
+       // BleSdk.getServer().send("hello world".toByteArray())
+        BleSdk.getServer().send(msg.toByteArray(Charsets.UTF_8))
     }
+
+    private val msg = """
+        
+        So I’ve faced some issues with a BLE read, and here is the best summary I have:
+
+        “Receive String” works on a READ characteristic
+        “Receive Byte Array” returns on error on the exact same characteristic.
+        Here is my case, I can connect to a BLE device, and then read on a button click. 
+        Using a counter, I can alternative between the two reads. The read string version returns 
+        the data, but the Receive Byte array always flags an error. Ultimately, 
+        I need the Read Byte Array for my application, but I haven’t been able to debug 
+        the error difference between the calls.
+    """.trimIndent()
 }
 
 
