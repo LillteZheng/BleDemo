@@ -66,6 +66,7 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
         override fun convert(holder: BaseViewHolder, item: ScanBeacon) {
             //没有名字不显示
             holder.setText(R.id.item_ble_name_tv, "名称: " + item.name ?: "Null")
+                .setText(R.id.item_ble_rssi_tv, "信号: " + item.rssi)
                 .setText(R.id.item_ble_mac_tv, "地址: " + item.device?.address)
                 .setText(R.id.item_ble_device_tv, item.record?.toString() ?: "Null")
         }
@@ -75,6 +76,7 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
     override fun onItemClick(adapter: BaseQuickAdapter<*, *>, view: View, position: Int) {
         //连接之前先关闭连接
       //  closeConnect()
+        BleSdk.getClient().release()
         val bleData = mData[position]
         bleData.device?.let {
             appInfo("开始连接 ${it.name} ...")
@@ -95,8 +97,7 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
         BleSdk.getClient().startScan(object : BleClient.IBleClientListener {
 
             override fun onScanResult(beacon: ScanBeacon) {
-                Log.d(TAG, "zsr onScanResult: ")
-                if (!mData.contains(beacon)) {
+                if (mData.size == 0 || mData.none { beacon.name == it.name }) {
                     mData.add(beacon)
                     mBleAdapter?.notifyItemInserted(mData.size - 1)
                 }
@@ -115,7 +116,8 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
     }
 
     fun writeData(view: View) {
-        val msg = binding.edit.text.toString()
+        val msg = binding.edit.text.toString().trim()
+        BleSdk.getClient().send(msg.toByteArray())
         /*val service = getGattService(BleBlueImpl.UUID_SERVICE)
         if (service != null) {
             val characteristic =
@@ -133,5 +135,10 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
 
     fun clearInfo(view: View) {
         binding.infoTv.text = ""
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        BleSdk.getClient().release()
     }
 }

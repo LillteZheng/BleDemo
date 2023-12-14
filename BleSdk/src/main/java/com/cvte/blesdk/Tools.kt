@@ -30,4 +30,4 @@ val UUID_READ_NOTIFY = UUID.fromString("11000000-0000-0000-0000-000000000000")
 val UUID_WRITE = UUID.fromString("12000000-0000-0000-0000-000000000000")
 val UUID_DESCRIBE = UUID.fromString("12000000-0000-0000-0000-000000000000")
 
-data class ScanBeacon(val name:String?,val device:BluetoothDevice?,val record:ScanRecord?)
+data class ScanBeacon(val name:String?,val rssi:Int,val device:BluetoothDevice?,val record:ScanRecord?)

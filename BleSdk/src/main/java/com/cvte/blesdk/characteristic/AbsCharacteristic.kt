@@ -173,6 +173,10 @@ abstract class AbsCharacteristic(val listener: IGattListener,tag:String) {
             status: Int
         ) {
             super.onCharacteristicRead(gatt, characteristic, status)
+            Log.d(
+                TAG,
+                "onCharacteristicRead() called with: gatt = $gatt, characteristic = $characteristic, status = $status"
+            )
 
         }
 
@@ -182,7 +186,10 @@ abstract class AbsCharacteristic(val listener: IGattListener,tag:String) {
             status: Int
         ) {
             super.onCharacteristicWrite(gatt, characteristic, status)
-
+            Log.d(
+                TAG,
+                "onCharacteristicWrite() called with: gatt = $gatt, characteristic = $characteristic, status = $status"
+            )
         }
 
         override fun onCharacteristicChanged(
@@ -190,7 +197,10 @@ abstract class AbsCharacteristic(val listener: IGattListener,tag:String) {
             characteristic: BluetoothGattCharacteristic?
         ) {
             super.onCharacteristicChanged(gatt, characteristic)
-
+            Log.d(
+                TAG,
+                "onCharacteristicChanged() called with: gatt = $gatt, characteristic = $characteristic"
+            )
         }
 
         override fun onDescriptorRead(
