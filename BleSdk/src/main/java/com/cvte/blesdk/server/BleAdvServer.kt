@@ -4,15 +4,16 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
-import android.os.ParcelUuid
-import com.cvte.blesdk.UUID_SERVICE
 
 /**
  * @author by zhengshaorui 2023/12/12
  * describe：广播服务端
  */
-internal class BleAdvServer(val bluetoothAdapter: BluetoothAdapter,val advertiseCallback:AdvertiseCallback) {
-     init{
+internal class BleAdvServer(val bluetoothAdapter: BluetoothAdapter) {
+
+    private var advertiseCallback: AdvertiseCallback? = null
+    fun startBroadcast(advertiseCallback: AdvertiseCallback) {
+        this.advertiseCallback = advertiseCallback
         /**
          * GAP广播数据最长只能31个字节，包含两中： 广播数据和扫描回复
          * - 广播数据是必须的，外设需要不断发送广播，让中心设备知道
@@ -37,7 +38,7 @@ internal class BleAdvServer(val bluetoothAdapter: BluetoothAdapter,val advertise
             .setIncludeDeviceName(true) //显示名字
             .setIncludeTxPowerLevel(true)//设置功率
             //设置 UUID 服务的 uuid，其实数据可以隐藏在这个 UUID 里面，不设置，可支持27个字节，待验证：https://blog.csdn.net/baidu_35757025/article/details/114392518
-           // .addServiceUuid(ParcelUuid(UUID_SERVICE))
+            // .addServiceUuid(ParcelUuid(UUID_SERVICE))
             .build()
 
         /**
@@ -57,9 +58,11 @@ internal class BleAdvServer(val bluetoothAdapter: BluetoothAdapter,val advertise
             scanResponse,
             advertiseCallback
         )
-
     }
-    fun release() {
-        bluetoothAdapter.bluetoothLeAdvertiser?.stopAdvertising(advertiseCallback)
+
+    fun stopBroadcast() {
+        advertiseCallback?.let {
+            bluetoothAdapter.bluetoothLeAdvertiser?.stopAdvertising(it)
+        }
     }
 }

@@ -1,13 +1,10 @@
 package com.cvte.blesdk.server
 
 import android.Manifest
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
 import android.os.Build
-import androidx.annotation.RequiresApi
 import com.cvte.blesdk.BleError
 import com.cvte.blesdk.GattStatus
 import com.cvte.blesdk.abs.AbsBle
@@ -41,7 +38,8 @@ class BleServer(context: Context?) :AbsBle(context){
         }
 
         bluetoothAdapter?.name = name
-        bleAdvServer = BleAdvServer(bluetoothAdapter!!,advertiseCallback)
+        bleAdvServer = BleAdvServer(bluetoothAdapter!!)
+        bleAdvServer?.startBroadcast(advertiseCallback)
     }
 
     override fun checkPermission(listener: IBle): Boolean {
@@ -60,7 +58,7 @@ class BleServer(context: Context?) :AbsBle(context){
     }
 
     fun release(){
-        bleAdvServer?.release()
+        bleAdvServer?.stopBroadcast()
         bleAdvServer = null
         gattServer?.release()
         gattServer = null
@@ -73,31 +71,40 @@ class BleServer(context: Context?) :AbsBle(context){
     }
 
     fun closeServer() {
-        bleAdvServer?.release()
+        bleAdvServer?.stopBroadcast()
         gattServer?.release()
+    }
+
+    private fun startGattService(){
+        if (gattServer == null) {
+            gattServer = ServerGattChar(object : AbsCharacteristic.IGattListener {
+
+                override fun onEvent(status: GattStatus, obj: Any?) {
+                    when(status){
+                        GattStatus.SERVER_WRITE->{
+                            listener?.onLog("client: write data:${String(obj as ByteArray)}")
+                        }
+                        GattStatus.SERVER_DISCONNECTED->{
+                            listener?.onLog("$obj ,  status change:$status,重新启动广播")
+                            closeServer()
+                            bleAdvServer?.startBroadcast(advertiseCallback)
+                        }
+                        else ->{
+                            listener?.onLog("$obj ,  status change:$status")
+                        }
+                    }
+                }
+
+            })
+        }
+        gattServer?.startGattService()
     }
 
     private val advertiseCallback = object : AdvertiseCallback() {
         override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
             super.onStartSuccess(settingsInEffect)
             listener?.onSuccess(bluetoothAdapter?.name)
-            if (gattServer == null) {
-                gattServer = ServerGattChar(object : AbsCharacteristic.IGattListener {
-
-                    override fun onEvent(status: GattStatus, obj: Any?) {
-                        when(status){
-                            GattStatus.SERVER_WRITE->{
-                                listener?.onLog("client: write data:${String(obj as ByteArray)}")
-                            }
-                            else ->{
-                                listener?.onLog("$obj ,  status change:$status")
-                            }
-                        }
-                    }
-
-                })
-            }
-            gattServer?.startGattService()
+            startGattService()
         }
 
         override fun onStartFailure(errorCode: Int) {

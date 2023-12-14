@@ -40,7 +40,7 @@ class BleClient(context: Context?) : AbsBle(context) {
         bluetoothAdapter?.bluetoothLeScanner?.startScan(null, configScanSession().build(), scanCallback)
         Handler().postDelayed({
             stopScan()
-        }, 3000)
+        }, 5000)
     }
 
     fun connect(dev:BluetoothDevice,autoConnect:Boolean){
@@ -49,6 +49,9 @@ class BleClient(context: Context?) : AbsBle(context) {
             gattChar = ClientGattChar(object : AbsCharacteristic.IGattListener {
                 override fun onEvent(status: GattStatus, obj: Any?) {
                     listener?.onLog("onEvent status = $status,obj = $obj")
+                    if (status == GattStatus.CLIENT_DISCONNECTED){
+                        release()
+                    }
                 }
 
             })
@@ -70,6 +73,7 @@ class BleClient(context: Context?) : AbsBle(context) {
     fun release(){
         stopScan()
         gattChar?.release()
+        gattChar = null
     }
 
 

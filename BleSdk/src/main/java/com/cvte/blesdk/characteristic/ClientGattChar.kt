@@ -33,6 +33,7 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener,"clie
         } else {
             isConnect = false
             listener.onEvent(GattStatus.CLIENT_DISCONNECTED,gatt?.device?.name)
+
         }
     }
 
@@ -68,5 +69,6 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener,"clie
             it.disconnect()
             it.close()
         }
+        blueGatt = null
     }
 }
