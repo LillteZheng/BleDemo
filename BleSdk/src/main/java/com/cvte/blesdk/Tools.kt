@@ -23,6 +23,7 @@ enum class GattStatus{
     //客户端
     CLIENT_CONNECTED,
     CLIENT_DISCONNECTED,
+    CLIENT_READ
 }
 
 val UUID_SERVICE = UUID.fromString("10000000-0000-0000-0000-000000000000")

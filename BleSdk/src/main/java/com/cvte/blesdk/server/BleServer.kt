@@ -70,6 +70,10 @@ class BleServer(context: Context?) :AbsBle(context){
 
     }
 
+    override fun send(toByteArray: ByteArray) {
+        gattServer?.send(toByteArray)
+    }
+
     fun closeServer() {
         bleAdvServer?.stopBroadcast()
         gattServer?.release()
@@ -126,7 +130,7 @@ class BleServer(context: Context?) :AbsBle(context){
                     listener?.onFail(BleError.ADVERTISE_FAILED,"advertise feature unsupported")
                 }
                 else -> {
-                    listener?.onFail(BleError.ADVERTISE_FAILED,"advertise failed")
+                    listener?.onFail(BleError.ADVERTISE_FAILED,"advertise failed: $errorCode")
                 }
             }
         }

@@ -2,7 +2,6 @@ package com.zhengsr.bledemo
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -13,7 +12,6 @@ import androidx.core.app.ActivityCompat
 import com.cvte.blesdk.BleError
 import com.cvte.blesdk.BleSdk
 import com.cvte.blesdk.server.BleServer
-import com.zhengsr.bledemo.databinding.ActivityClientBinding
 import com.zhengsr.bledemo.databinding.ActivityServerBinding
 
 class ServerActivity : AppCompatActivity() {
@@ -78,9 +76,9 @@ class ServerActivity : AppCompatActivity() {
         BleSdk.getServer().release()
     }
 
-    fun closeServer(view: View) {
+    fun send(view: View) {
        // BleSdk.getServer().closeServer()
-
+        BleSdk.getServer().send("hello world".toByteArray())
     }
 }
 

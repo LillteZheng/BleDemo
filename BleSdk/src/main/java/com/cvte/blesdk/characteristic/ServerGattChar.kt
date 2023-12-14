@@ -10,6 +10,7 @@ import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.util.Log
 import com.cvte.blesdk.BleSdk
+import com.cvte.blesdk.GattStatus
 import com.cvte.blesdk.UUID_DESCRIBE
 import com.cvte.blesdk.UUID_READ_NOTIFY
 import com.cvte.blesdk.UUID_SERVICE
@@ -22,7 +23,7 @@ import com.cvte.blesdk.UUID_WRITE
 class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener,"server"){
     private var bluetoothGattServer: BluetoothGattServer? = null
     private var gattService:BluetoothGattService? = null
-
+    private var connectDevice:BluetoothDevice? = null
     fun startGattService() {
         val readNotifyChar = BluetoothGattCharacteristic(
             UUID_READ_NOTIFY,
@@ -68,6 +69,23 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener,"serv
 
     }
 
+    override fun onServerStateChange(device: BluetoothDevice?, status: Int, newState: Int) {
+        super.onServerStateChange(device, status, newState)
+        Log.d(
+            TAG,
+            "onServerStateChange() called with: device = $device, status = $status, newState = $newState"
+        )
+        if (status == BluetoothGatt.GATT_SUCCESS && newState == 2) {
+            isConnect = true
+            listener.onEvent(GattStatus.SERVER_CONNECTED,device?.name)
+            connectDevice = device
+          //  bluetoothGattServer?.sendResponse(device,0,BluetoothGatt.GATT_SUCCESS,0,"hello world".toByteArray())
+        } else {
+            isConnect = false
+            listener.onEvent(GattStatus.SERVER_DISCONNECTED,device?.name)
+        }
+    }
+
     override fun onServerCharWriteRequest(
         device: BluetoothDevice?,
         requestId: Int,
@@ -94,8 +112,31 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener,"serv
 
 
     override fun release(){
-        Log.d(TAG, "release: ")
-        bluetoothGattServer?.close()
-        bluetoothGattServer = null
+
+        Log.d(TAG, "release: $connectDevice")
+        try {
+            connectDevice?.let {
+                bluetoothGattServer?.getService(UUID_SERVICE)?.getCharacteristic(UUID_READ_NOTIFY)?.apply {
+                    value = "over".toByteArray()
+                    bluetoothGattServer?.notifyCharacteristicChanged(connectDevice!!,this,false)
+                }
+            }
+            bluetoothGattServer?.close()
+            bluetoothGattServer = null
+        } catch (e: Exception) {
+            Log.e(TAG, "release: $e")
+        }
+    }
+
+    override fun send(data: ByteArray) {
+        if (isConnected()) {
+            connectDevice?.let {
+                bluetoothGattServer?.getService(UUID_SERVICE)?.getCharacteristic(UUID_READ_NOTIFY)
+                    ?.apply {
+                        value = data
+                        bluetoothGattServer?.notifyCharacteristicChanged(connectDevice!!, this, false)
+                    }
+            }
+        }
     }
 }

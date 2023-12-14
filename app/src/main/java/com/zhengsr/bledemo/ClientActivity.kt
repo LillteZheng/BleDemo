@@ -118,13 +118,6 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
     fun writeData(view: View) {
         val msg = binding.edit.text.toString().trim()
         BleSdk.getClient().send(msg.toByteArray())
-        /*val service = getGattService(BleBlueImpl.UUID_SERVICE)
-        if (service != null) {
-            val characteristic =
-                service.getCharacteristic(BleBlueImpl.UUID_WRITE) //通过UUID获取可读的Characteristic
-            characteristic.value = msg.toByteArray()
-            mBluetoothGatt?.writeCharacteristic(characteristic)
-        }*/
     }
 
     fun appInfo(msg:String){

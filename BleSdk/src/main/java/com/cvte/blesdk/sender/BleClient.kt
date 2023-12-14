@@ -59,7 +59,7 @@ class BleClient(context: Context?) : AbsBle(context) {
         gattChar?.connectGatt(dev,autoConnect)
     }
 
-    fun send(data:ByteArray){
+    override fun send(data:ByteArray){
         gattChar?.send(data)
     }
 

@@ -65,4 +65,6 @@ abstract class AbsBle(val context: Context?) {
         }
         return true
     }
+
+    abstract fun send(toByteArray: ByteArray)
 }

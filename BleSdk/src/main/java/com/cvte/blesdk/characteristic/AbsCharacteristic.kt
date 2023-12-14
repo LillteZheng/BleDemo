@@ -29,21 +29,13 @@ abstract class AbsCharacteristic(val listener: IGattListener,tag:String) {
                                                 responseNeeded: Boolean,
                                                 offset: Int,
                                                 value: ByteArray?){}
-    protected open fun onCharReadRequest(device: BluetoothDevice?,
-                                         requestId: Int,
-                                         offset: Int,
-                                         characteristic: BluetoothGattCharacteristic?){}
+
+    protected open fun onServerStateChange(device: BluetoothDevice?, status: Int, newState: Int){}
 
     protected val gattServerCallback = object : BluetoothGattServerCallback() {
         override fun onConnectionStateChange(device: BluetoothDevice?, status: Int, newState: Int) {
             super.onConnectionStateChange(device, status, newState)
-            if (status == BluetoothGatt.GATT_SUCCESS && newState == 2) {
-                isConnect = true
-                listener.onEvent(GattStatus.SERVER_CONNECTED,device?.name)
-            } else {
-                isConnect = false
-                listener.onEvent(GattStatus.SERVER_DISCONNECTED,device?.name)
-            }
+            onServerStateChange(device,status,newState)
         }
 
 
@@ -55,20 +47,7 @@ abstract class AbsCharacteristic(val listener: IGattListener,tag:String) {
         ) {
             super.onCharacteristicReadRequest(device, requestId, offset, characteristic)
 
-            /**
-             * 中心设备read时，回调
-             */
-            val data = "this is a test from ble server"
-            /* mBluetoothGattServer?.sendResponse(
-                 device, requestId, BluetoothGatt.GATT_SUCCESS,
-                 offset, data.toByteArray()
-             )
-             logInfo("客户端读取 [characteristic ${characteristic?.uuid}] $data")*/
-            Log.d(
-                TAG,
-                "onCharacteristicReadRequest() called with: device = $device, requestId = $requestId, offset = $offset, characteristic = $characteristic"
-            )
-            onCharReadRequest(device,requestId,offset,characteristic)
+
         }
 
         override fun onCharacteristicWriteRequest(
@@ -154,6 +133,8 @@ abstract class AbsCharacteristic(val listener: IGattListener,tag:String) {
 
     protected open fun onClientStateChange(gatt: BluetoothGatt?, status: Int, newState: Int){}
     protected open fun onClientConnectService(gatt: BluetoothGatt?, status: Int){}
+    protected open fun onClientRead( gatt: BluetoothGatt?,
+                                     characteristic: BluetoothGattCharacteristic?){}
 
     protected val gattClientCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
@@ -197,10 +178,7 @@ abstract class AbsCharacteristic(val listener: IGattListener,tag:String) {
             characteristic: BluetoothGattCharacteristic?
         ) {
             super.onCharacteristicChanged(gatt, characteristic)
-            Log.d(
-                TAG,
-                "onCharacteristicChanged() called with: gatt = $gatt, characteristic = $characteristic"
-            )
+            onClientRead(gatt,characteristic)
         }
 
         override fun onDescriptorRead(
@@ -224,4 +202,6 @@ abstract class AbsCharacteristic(val listener: IGattListener,tag:String) {
 
     open fun release(){
     }
+
+    abstract fun send(data: ByteArray)
 }

@@ -24,8 +24,8 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="断开服务"
-        android:onClick="closeServer"
+        android:text="发送消息"
+        android:onClick="send"
         />
 
 
