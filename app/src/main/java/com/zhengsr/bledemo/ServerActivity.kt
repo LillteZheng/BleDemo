@@ -6,17 +6,18 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.cvte.blesdk.BleError
 import com.cvte.blesdk.BleSdk
+import com.cvte.blesdk.ServerStatus
 import com.cvte.blesdk.server.BleServer
+import com.cvte.blesdk.server.BleServerOption
+import com.cvte.blesdk.server.IBleListener
 import com.zhengsr.bledemo.databinding.ActivityServerBinding
-import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
+import com.zhengsr.zplib.ZPermission
 
 class ServerActivity : AppCompatActivity() {
     companion object{
@@ -38,6 +39,8 @@ class ServerActivity : AppCompatActivity() {
             ), 1)
 
 
+
+
         //在 Android 10 还需要开启 gps,搜索才需要
      /*   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val lm: LocationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -49,24 +52,40 @@ class ServerActivity : AppCompatActivity() {
 
     @SuppressLint("MissingPermission")
     fun openServer(view: View) {
-        BleSdk.getServer().initBle("Vieunite_12345688", object : BleServer.IBleServerCallback {
-            override fun onLog(msg: String) {
-                Log.d(TAG, "onLog: $msg")
-               appInfo(msg)
+        val option = BleServerOption.Builder()
+            .name("Vieunite_12345688")
+            .logListener(object : BleServerOption.ILogListener {
+                override fun onLog(log: String) {
+                    Log.d(TAG, "$log")
+                }
+            }).build()
+
+        BleServer.get().startServer(option, object : IBleListener {
+            override fun onEvent(serverStatus: ServerStatus, obj: Any?) {
+                when(serverStatus){
+                    ServerStatus.ADVERTISE_SUCCESS -> {
+                        appInfo("开启广播成功，请搜索设备：$obj")
+                    }
+                    ServerStatus.CLIENT_CONNECT -> {
+                        appInfo("设备($obj)，连接成功，可以通信了")
+                    }
+                    ServerStatus.CLIENT_DISCONNECT -> {
+                        appInfo("设备($obj)，断开连接")
+                    }
+                    ServerStatus.CLIENT_WRITE->{
+                        appInfo("收到数据: ${String(obj as ByteArray)}")
+                    }
+                    else -> {
+                        appInfo("事件: serverStatus = $serverStatus, obj = $obj")
+                    }
+                }
             }
 
-            override fun onFail(errorCode: BleError, msg: String) {
-                appInfo( "fail: errorCode = $errorCode, msg = $msg")
-
-            }
-
-            override fun onSuccess(name: String?) {
-                appInfo("广播启动成功，请搜索: name = $name")
+            override fun onFail(error: BleError, errorMsg: String) {
+                appInfo("失败: error = $error, errorMsg = $errorMsg")
             }
 
         })
-
-
 
     }
 
@@ -78,13 +97,15 @@ class ServerActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        BleSdk.getServer().release()
+      //  BleSdk.getServer().release()
+        BleServer.get().release()
     }
 
     fun send(view: View) {
        // BleSdk.getServer().closeServer()
        // BleSdk.getServer().send("hello world".toByteArray())
-        BleSdk.getServer().send(msg.toByteArray(Charsets.UTF_8))
+      //  BleSdk.getServer().send(msg.toByteArray(Charsets.UTF_8))
+        BleServer.get().send(msg.toByteArray(Charsets.UTF_8))
     }
 
     private val msg = """

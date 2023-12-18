@@ -8,11 +8,12 @@ import java.util.UUID
 enum class BleError {
     CONTEXT_NULL,
     BLE_NOT_SUPPORT,
-    BLE_NOT_OPEN,
+    BLUETOOTH_NOT_OPEN,
     PERMISSION_DENIED,
     GPS_NOT_OPEN,
     NAME_TOO_LONG,
-    ADVERTISE_FAILED
+    ADVERTISE_FAILED,
+    NAME_NULL
 }
 enum class GattStatus{
     //服务端
@@ -23,7 +24,16 @@ enum class GattStatus{
     //客户端
     CLIENT_CONNECTED,
     CLIENT_DISCONNECTED,
-    CLIENT_READ
+    CLIENT_READ,
+
+    LOG
+}
+
+enum class ServerStatus{
+    ADVERTISE_SUCCESS,
+    CLIENT_CONNECT,
+    CLIENT_DISCONNECT,
+    CLIENT_WRITE
 }
 
 val UUID_SERVICE = UUID.fromString("10000000-0000-0000-0000-000000000000")

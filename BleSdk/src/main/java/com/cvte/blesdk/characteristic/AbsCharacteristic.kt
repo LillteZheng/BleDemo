@@ -203,4 +203,8 @@ abstract class AbsCharacteristic(val listener: IGattListener,tag:String) {
     }
 
     abstract fun send(data: ByteArray)
+
+    protected open fun pushLog(msg:String){
+        listener.onEvent(GattStatus.LOG,"$TAG: $msg")
+    }
 }

@@ -17,6 +17,7 @@ import com.cvte.blesdk.abs.AbsBle
 import com.cvte.blesdk.abs.IBle
 import com.cvte.blesdk.characteristic.AbsCharacteristic
 import com.cvte.blesdk.characteristic.ClientGattChar
+import com.cvte.blesdk.server.IBleListener
 import com.cvte.blesdk.utils.BleUtil
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -30,7 +31,7 @@ class BleClient(context: Context?) : AbsBle(context) {
     private var gattChar:ClientGattChar? = null
     fun startScan(listener: IBleClientListener) {
         //先关闭之前的连接
-        gattChar?.release()
+       /* gattChar?.release()
         this.listener = listener
         if (!checkPermission(listener)) {
             return
@@ -42,7 +43,7 @@ class BleClient(context: Context?) : AbsBle(context) {
         bluetoothAdapter?.bluetoothLeScanner?.startScan(null, configScanSession().build(), scanCallback)
         Handler().postDelayed({
             stopScan()
-        }, 5000)
+        }, 5000)*/
     }
 
     fun connect(dev:BluetoothDevice,autoConnect:Boolean){
@@ -92,7 +93,7 @@ class BleClient(context: Context?) : AbsBle(context) {
 
     }
 
-    override fun checkPermission(listener: IBle): Boolean {
+    override fun checkPermission(listener: IBleListener): Boolean {
         var permission = super.checkPermission(listener)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (!BleUtil.isGpsOpen(context)) {

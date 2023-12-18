@@ -21,7 +21,7 @@ object BleSdk {
     @JvmStatic
     fun getServer() : BleServer {
         if (server == null) {
-            server = BleServer(context)
+            server = BleServer()
         }
         return server!!
     }

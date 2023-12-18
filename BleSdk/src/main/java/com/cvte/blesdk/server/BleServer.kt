@@ -1,6 +1,8 @@
 package com.cvte.blesdk.server
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.app.AppOpsManager.OnOpNotedCallback
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
@@ -9,9 +11,10 @@ import android.util.Log
 import androidx.core.util.forEach
 import androidx.core.util.size
 import com.cvte.blesdk.BleError
+import com.cvte.blesdk.BleSdk
 import com.cvte.blesdk.GattStatus
+import com.cvte.blesdk.ServerStatus
 import com.cvte.blesdk.abs.AbsBle
-import com.cvte.blesdk.abs.IBle
 import com.cvte.blesdk.characteristic.AbsCharacteristic
 import com.cvte.blesdk.characteristic.ServerGattChar
 import com.cvte.blesdk.utils.BleUtil
@@ -21,48 +24,51 @@ import java.nio.ByteBuffer
  * @author by zhengshaorui 2023/12/12
  * describe：蓝牙服务端，主要负责发送广播，开启蓝牙服务
  */
-class BleServer(context: Context?) :AbsBle(context){
-    companion object{
+class BleServer : AbsBle(BleSdk.context) {
+    companion object {
         private const val TAG = "BleServer"
         private const val MAX_NAME_SIZE = 20
         private const val MAX_MTU_SIZE = 512
+
+        @SuppressLint("StaticFieldLeak")
+        private val instance: BleServer = BleServer()
+
+        @Synchronized
+        fun get(): BleServer {
+            return instance
+        }
     }
+
+    private var option: BleServerOption.Builder? = null
+    private var iBleListener: IBleListener? = null
+
     private var gattServer: ServerGattChar? = null
-    private var listener:IBleServerCallback? = null
 
     private var bleAdvServer: BleAdvServer? = null
-    fun initBle(name:String, callback:IBleServerCallback){
-        listener = callback
-
-        if (!checkPermission(callback)){
+    fun startServer(bleOption: BleServerOption, iBleListener: IBleListener) {
+        this.option = bleOption.builder
+        this.iBleListener = iBleListener
+        if (!checkPermission(iBleListener)) {
             return
         }
-        if (name.length > MAX_NAME_SIZE){
-            callback.onFail(BleError.NAME_TOO_LONG,"name length must less than $MAX_NAME_SIZE")
-            return
+        //先关闭之前的广播和服务
+        closeServer()
+        //开启广播
+        if (bleAdvServer == null) {
+            bleAdvServer = BleAdvServer(bluetoothAdapter!!)
         }
-
-        bluetoothAdapter?.name = name
-        bleAdvServer = BleAdvServer(bluetoothAdapter!!)
+        bluetoothAdapter?.name = option?.name
         bleAdvServer?.startBroadcast(advertiseCallback)
+        pushLog("start advertise")
+
     }
 
-    override fun checkPermission(listener: IBle): Boolean {
-        var permission =  super.checkPermission(listener)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (!BleUtil.isPermission(
-                    context?.applicationContext,
-                    Manifest.permission.BLUETOOTH_ADMIN
-                )){
-                listener.onFail(BleError.PERMISSION_DENIED, "BLUETOOTH_CONNECT permission denied")
-                permission = false
-            }
-        }
 
-        return permission
+    private fun pushLog(msg: String) {
+        option?.logListener?.onLog(msg)
     }
 
-    fun release(){
+    fun release() {
         bleAdvServer?.stopBroadcast()
         bleAdvServer = null
         gattServer?.release()
@@ -70,64 +76,78 @@ class BleServer(context: Context?) :AbsBle(context){
     }
 
 
-    interface IBleServerCallback:IBle{
-        fun onSuccess(name: String?)
-
-    }
-
     override fun send(data: ByteArray) {
         val subpackage = BleUtil.subpackage(data, 19)
         //todo 分包时，可以抽象类，先发大小，再发数据
-        if (subpackage.size > 1){
+        if (subpackage.size > 1) {
             gattServer?.send("_len${data.size}".toByteArray())
             gattServer?.send("_count${subpackage.size}".toByteArray())
         }
         val buffer = ByteBuffer.allocate(data.size)
-        subpackage.forEach {key,value->
+        subpackage.forEach { key, value ->
             gattServer?.send(value)
             Log.d(TAG, "zsr send: $key,${value.size}")
             buffer.put(value)
         }
         Log.d(TAG, "zsr send data:${String(buffer.array())}")
-       /* subpackage.forEach { key, value ->
-            gattServer?.send(value)
-        }*/
+        /* subpackage.forEach { key, value ->
+             gattServer?.send(value)
+         }*/
     }
 
     fun closeServer() {
+        pushLog("close server if need: bleAdvServer:$bleAdvServer, gattServer:$gattServer")
         bleAdvServer?.stopBroadcast()
         gattServer?.release()
     }
 
-    private fun startGattService(){
+    private fun startGattService() {
+        pushLog("start gatt service: $gattServer")
         if (gattServer == null) {
             gattServer = ServerGattChar(object : AbsCharacteristic.IGattListener {
 
                 override fun onEvent(status: GattStatus, obj: Any?) {
-                    when(status){
-                        GattStatus.SERVER_WRITE->{
-                            listener?.onLog("client: write data:${String(obj as ByteArray)}")
+                    pushLog("server status change:$status")
+                    when (status) {
+                        GattStatus.SERVER_WRITE -> {
+                            pushLog("client: write data:${String(obj as ByteArray)}")
+                            iBleListener?.onEvent(ServerStatus.CLIENT_WRITE, obj)
                         }
-                        GattStatus.SERVER_DISCONNECTED->{
-                            listener?.onLog("$obj ,  status change:$status,重新启动广播")
+
+                        GattStatus.SERVER_DISCONNECTED -> {
+                            pushLog("client ($obj) disconnect,reset advertise and gatt service")
                             closeServer()
                             bleAdvServer?.startBroadcast(advertiseCallback)
+                            iBleListener?.onEvent(ServerStatus.CLIENT_DISCONNECT,obj)
                         }
-                        else ->{
-                            listener?.onLog("$obj ,  status change:$status")
+
+                        GattStatus.SERVER_CONNECTED->{
+                            obj?.let {
+                                val mac = obj as String
+                                bluetoothAdapter?.getRemoteDevice(mac)?.let {
+                                    iBleListener?.onEvent(ServerStatus.CLIENT_CONNECT,it)
+                                }
+                            }
+                            pushLog("client ($obj) connected")
+                            iBleListener?.onEvent(ServerStatus.CLIENT_CONNECT,obj)
+                        }
+                        else -> {
+                            pushLog("$obj ,  status change:$status")
                         }
                     }
                 }
 
             })
         }
-        gattServer?.startGattService()
+        gattServer?.startGattService(option!!)
     }
+
 
     private val advertiseCallback = object : AdvertiseCallback() {
         override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
             super.onStartSuccess(settingsInEffect)
-            listener?.onSuccess(bluetoothAdapter?.name)
+            pushLog("advertise success,try to start gatt service")
+            iBleListener?.onEvent(ServerStatus.ADVERTISE_SUCCESS,bluetoothAdapter?.name)
             startGattService()
         }
 
@@ -136,24 +156,46 @@ class BleServer(context: Context?) :AbsBle(context){
             closeServer()
             when (errorCode) {
                 ADVERTISE_FAILED_DATA_TOO_LARGE -> {
-                    listener?.onFail(BleError.ADVERTISE_FAILED,"advertise data too large,over 31 bytes")
+                    fail(BleError.ADVERTISE_FAILED, "advertise data too large,over 31 bytes")
                 }
+
                 ADVERTISE_FAILED_TOO_MANY_ADVERTISERS -> {
-                    listener?.onFail(BleError.ADVERTISE_FAILED,"too many advertisers")
+                    fail(BleError.ADVERTISE_FAILED, "too many advertisers")
                 }
+
                 ADVERTISE_FAILED_ALREADY_STARTED -> {
-                    listener?.onFail(BleError.ADVERTISE_FAILED,"advertise already started")
+                    fail(BleError.ADVERTISE_FAILED, "advertise already started")
                 }
+
                 ADVERTISE_FAILED_INTERNAL_ERROR -> {
-                    listener?.onFail(BleError.ADVERTISE_FAILED,"advertise internal error")
+                    fail(BleError.ADVERTISE_FAILED, "advertise internal error")
                 }
+
                 ADVERTISE_FAILED_FEATURE_UNSUPPORTED -> {
-                    listener?.onFail(BleError.ADVERTISE_FAILED,"advertise feature unsupported")
+                    fail(BleError.ADVERTISE_FAILED, "advertise feature unsupported")
                 }
+
                 else -> {
-                    listener?.onFail(BleError.ADVERTISE_FAILED,"advertise failed: $errorCode")
+                    fail(BleError.ADVERTISE_FAILED, "advertise failed: $errorCode")
                 }
             }
         }
     }
+
+
+    private fun fail(error: BleError, msg: String) {
+        iBleListener?.onFail(error, msg)
+    }
+
+
+    override fun checkPermission(listener: IBleListener): Boolean {
+        var permission =  super.checkPermission(listener)
+        if(option?.name == null || option?.name?.length!! > MAX_NAME_SIZE){
+            listener.onFail(BleError.PERMISSION_DENIED,"name is null or length > $MAX_NAME_SIZE")
+            permission = false
+        }
+        return permission
+    }
+
+
 }

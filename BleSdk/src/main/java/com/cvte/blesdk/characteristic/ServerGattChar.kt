@@ -15,6 +15,7 @@ import com.cvte.blesdk.UUID_DESCRIBE
 import com.cvte.blesdk.UUID_READ_NOTIFY
 import com.cvte.blesdk.UUID_SERVICE
 import com.cvte.blesdk.UUID_WRITE
+import com.cvte.blesdk.server.BleServerOption
 
 /**
  * @author by zhengshaorui 2023/12/13
@@ -24,24 +25,19 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener,"serv
     private var bluetoothGattServer: BluetoothGattServer? = null
     private var gattService:BluetoothGattService? = null
     private var connectDevice:BluetoothDevice? = null
-    fun startGattService() {
+    fun startGattService(builder:BleServerOption.Builder) {
         val readNotifyChar = BluetoothGattCharacteristic(
-            UUID_READ_NOTIFY,
+            builder.readAndNotifyUuid,
             BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
             BluetoothGattCharacteristic.PERMISSION_READ
         )
 
         val writeChar = BluetoothGattCharacteristic(
-            UUID_WRITE,
+            builder.writeUuid,
             BluetoothGattCharacteristic.PROPERTY_WRITE ,
             BluetoothGattCharacteristic.PERMISSION_WRITE
-        ).apply {
-            //添加描述符
-            addDescriptor(BluetoothGattDescriptor(
-                UUID_DESCRIBE,
-                BluetoothGattDescriptor.PERMISSION_WRITE
-            ))
-        }
+        )
+        pushLog("config characteristic ,write ,read nad notify")
 
 
 
@@ -52,7 +48,7 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener,"serv
         //开启广播service，这样才能通信，包含一个或多个 characteristic ，每个service 都有一个 uuid
          gattService =
             BluetoothGattService(
-                UUID_SERVICE,
+                builder.serviceUUid,
                 BluetoothGattService.SERVICE_TYPE_PRIMARY
             ).apply {
                 addCharacteristic(readNotifyChar)
@@ -63,7 +59,7 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener,"serv
         val bluetoothManager = BleSdk.context!!.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         //打开 GATT 服务，方便客户端连接
         bluetoothGattServer = bluetoothManager.openGattServer(BleSdk.context!!, gattServerCallback)
-        Log.d(TAG, "start: ${bluetoothGattServer?.services}")
+        pushLog("start gatt service")
         bluetoothGattServer?.addService(gattService)
 
 
@@ -71,18 +67,24 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener,"serv
 
     override fun onServerStateChange(device: BluetoothDevice?, status: Int, newState: Int) {
         super.onServerStateChange(device, status, newState)
-        Log.d(
-            TAG,
+        pushLog(
             "onServerStateChange() called with: device = $device, status = $status, newState = $newState"
+
         )
+        /**
+         * todo ： bluetooth 的name，是从缓存里面拿的，需要执行一遍扫描才能拿到最新的name
+         * 后续优化
+         */
         if (status == BluetoothGatt.GATT_SUCCESS && newState == 2) {
             isConnect = true
             listener.onEvent(GattStatus.SERVER_CONNECTED,device?.name)
             connectDevice = device
-          //  bluetoothGattServer?.sendResponse(device,0,BluetoothGatt.GATT_SUCCESS,0,"hello world".toByteArray())
+            //需要先调用 connect，cancel 才会起作用
+            bluetoothGattServer?.connect(device,false)
         } else {
             isConnect = false
             listener.onEvent(GattStatus.SERVER_DISCONNECTED,device?.name)
+            connectDevice = null
         }
     }
 
@@ -116,11 +118,9 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener,"serv
         Log.d(TAG, "release: $connectDevice")
         try {
             connectDevice?.let {
-                bluetoothGattServer?.getService(UUID_SERVICE)?.getCharacteristic(UUID_READ_NOTIFY)?.apply {
-                    value = "over".toByteArray()
-                    bluetoothGattServer?.notifyCharacteristicChanged(connectDevice!!,this,false)
-                }
+                bluetoothGattServer?.cancelConnection(it)
             }
+            bluetoothGattServer?.clearServices()
             bluetoothGattServer?.close()
             bluetoothGattServer = null
         } catch (e: Exception) {
