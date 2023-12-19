@@ -1,7 +1,6 @@
 package com.zhengsr.bledemo
 
 import android.Manifest
-import android.bluetooth.BluetoothDevice
 import android.content.Context
 import android.location.LocationManager
 import android.os.Build
@@ -18,8 +17,10 @@ import com.chad.library.adapter.base.listener.OnItemClickListener
 import com.chad.library.adapter.base.viewholder.BaseViewHolder
 import com.cvte.blesdk.BleError
 import com.cvte.blesdk.BleSdk
+import com.cvte.blesdk.ClientStatus
 import com.cvte.blesdk.ScanBeacon
-import com.cvte.blesdk.sender.BleClient
+import com.cvte.blesdk.sender.BleClientOption
+import com.cvte.blesdk.sender.IClientBle
 import com.zhengsr.bledemo.databinding.ActivityClientBinding
 
 class ClientActivity : AppCompatActivity(), OnItemClickListener {
@@ -80,7 +81,7 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
         val bleData = mData[position]
         bleData.device?.let {
             appInfo("开始连接 ${it.name} ...")
-            BleSdk.getClient().connect(it,false)
+            BleSdk.getClient().connect(it)
 
         }
       //  blueGatt = bleData.dev.connectGatt(this, false, blueGattListener)
@@ -94,18 +95,36 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
         appInfo("开始扫描...")
         mData.clear()
         mBleAdapter?.notifyDataSetChanged()
-        BleSdk.getClient().startScan(object : BleClient.IBleClientListener {
-
-            override fun onScanResult(beacon: ScanBeacon) {
-                if (mData.size == 0 || mData.none { beacon.name == it.name }) {
-                    mData.add(beacon)
-                    mBleAdapter?.notifyItemInserted(mData.size - 1)
+        val option = BleClientOption.Builder()
+            .fliterName("Vieunite")
+            .logListener(object : BleClientOption.ILogListener {
+                override fun onLog(log: String) {
+                    Log.d(TAG, log)
                 }
-            }
 
-            override fun onLog(msg: String) {
-               // Log.d(TAG, "onLog() called with: msg = $msg")
-                appInfo(msg)
+            }).build()
+        BleSdk.getClient().startScan(option,object : IClientBle.IBleClientListener {
+
+
+
+            override fun onEvent(status: ClientStatus, obj: Any?) {
+                when(status){
+                    ClientStatus.SCAN_RESULT->{
+                        val beacon = obj as ScanBeacon
+                        if (mData.size == 0 || mData.none { beacon.name == it.name }) {
+                            mData.add(beacon)
+                            mBleAdapter?.notifyItemInserted(mData.size - 1)
+                        }
+                    }
+                    ClientStatus.SERVER_CONNECTED->{
+                        appInfo("连接上服务端：${obj as String}")
+                    }
+                    ClientStatus.SERVER_DISCONNECTED->{
+                        appInfo("服务端断开连接：${obj as String}")
+                    }
+
+                    else -> {}
+                }
             }
 
             override fun onFail(errorCode: BleError, msg: String) {

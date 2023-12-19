@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothProfile
+import android.content.Context
 import android.os.Build
 import android.util.Log
 import com.cvte.blesdk.BleSdk
@@ -20,7 +21,10 @@ import java.nio.charset.StandardCharsets
  */
 class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "client") {
     private var blueGatt: BluetoothGatt? = null
-    fun connectGatt(dev: BluetoothDevice, autoConnect: Boolean) {
+    private var name: String? = null
+    fun connectGatt(dev: BluetoothDevice,name:String?, autoConnect: Boolean) {
+        pushLog("connectGatt: ${dev.name}")
+        this.name = name
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             dev.connectGatt(
                 BleSdk.context!!,
@@ -35,13 +39,8 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
 
     override fun onClientStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
         super.onClientStateChange(gatt, status, newState)
-        Log.d(
-            TAG,
-            "onClientStateChange() called with: gatt = $gatt, status = $status, newState = $newState"
-        )
+        pushLog("onClientStateChange() called with: gatt = $gatt, status = $status, newState = $newState")
         if (newState == BluetoothProfile.STATE_CONNECTED) {
-            // isConnected = true
-            //  listener.onEvent(GattStatus.CLIENT_CONNECTED,gatt?.device?.name)
             gatt?.discoverServices()
         } else {
             isConnect = false
@@ -98,11 +97,11 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         super.onClientConnectService(gatt, status)
         blueGatt = gatt
         //设置一个notify，用来监听外设信息
+        pushLog("onClientConnectService: ${gatt?.device?.name},is can get service: ${gatt?.getService(UUID_SERVICE)}")
         gatt?.getService(UUID_SERVICE)?.let {
-            Log.d(TAG, "zsr onClientConnectService: ${it.getCharacteristic(UUID_READ_NOTIFY)}")
             it.getCharacteristic(UUID_READ_NOTIFY)?.let { char ->
                 val isSuccess = gatt.setCharacteristicNotification(char, true)
-                Log.d(TAG, "onClientConnectService: $isSuccess")
+                pushLog("setCharacteristicNotification: $isSuccess")
             }
         }
         //  blueGatt?.setCharacteristicNotification()
@@ -112,22 +111,24 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
             listener.onEvent(GattStatus.CLIENT_DISCONNECTED, gatt?.device?.name)
             gatt?.close()
         }
-        Log.d(TAG, "onClientConnectService() called with: gatt = ${gatt?.device}, status = $status")
-        /*  val service = gatt?.getService(BleBlueImpl.UUID_SERVICE)
-          mBluetoothGatt = gatt
-          logInfo("已连接上 GATT 服务，可以通信! ")*/
+        pushLog("connect to gatt Service,now you can communicate with it")
+        //先发送蓝牙名字
+       // send(name.toByteArray())
+        name?.let {
+            send(it.toByteArray())
+        }
     }
 
     override fun send(data: ByteArray) {
+        var isSuccess = false
         //uuid 是一对的
-        blueGatt?.getService(UUID_SERVICE)?.let {
-            it.getCharacteristic(UUID_WRITE)?.let { char ->
-                char.value = data
-                val isSuccess = blueGatt?.writeCharacteristic(char)
-                Log.d(TAG, "zsr send: $isSuccess")
-            }
-        }
+        pushLog("found service?: ${blueGatt?.getService(UUID_SERVICE)}")
 
+        isSuccess = blueGatt?.getService(UUID_SERVICE)?.getCharacteristic(UUID_WRITE)?.let {
+            it.value = data
+            blueGatt?.writeCharacteristic(it)
+        }?:false
+        pushLog("send: $isSuccess")
     }
 
     override fun release() {

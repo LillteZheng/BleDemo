@@ -108,9 +108,8 @@ abstract class AbsCharacteristic(val listener: IGattListener,tag:String) {
                 TAG,
                 "onDescriptorWriteRequest() called with: device = $device, requestId = $requestId, descriptor = $descriptor, preparedWrite = $preparedWrite, responseNeeded = $responseNeeded, offset = $offset, value = $value"
             )
-
-
         }
+
 
         override fun onExecuteWrite(device: BluetoothDevice?, requestId: Int, execute: Boolean) {
             super.onExecuteWrite(device, requestId, execute)
@@ -144,6 +143,8 @@ abstract class AbsCharacteristic(val listener: IGattListener,tag:String) {
 
         override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
             super.onServicesDiscovered(gatt, status)
+            //传输数据大一些
+          //  gatt?.requestMtu(512)
             onClientConnectService(gatt,status)
         }
 

@@ -6,7 +6,6 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -17,7 +16,6 @@ import com.cvte.blesdk.server.BleServer
 import com.cvte.blesdk.server.BleServerOption
 import com.cvte.blesdk.server.IBleListener
 import com.zhengsr.bledemo.databinding.ActivityServerBinding
-import com.zhengsr.zplib.ZPermission
 
 class ServerActivity : AppCompatActivity() {
     companion object{
@@ -53,20 +51,20 @@ class ServerActivity : AppCompatActivity() {
     @SuppressLint("MissingPermission")
     fun openServer(view: View) {
         val option = BleServerOption.Builder()
-            .name("Vieunite_12345688")
+            .name("Vieunite_987654321")
             .logListener(object : BleServerOption.ILogListener {
                 override fun onLog(log: String) {
                     Log.d(TAG, "$log")
                 }
             }).build()
 
-        BleServer.get().startServer(option, object : IBleListener {
+        BleSdk.getServer().startServer(option, object : BleServer.IBleServerListener {
             override fun onEvent(serverStatus: ServerStatus, obj: Any?) {
                 when(serverStatus){
                     ServerStatus.ADVERTISE_SUCCESS -> {
                         appInfo("开启广播成功，请搜索设备：$obj")
                     }
-                    ServerStatus.CLIENT_CONNECT -> {
+                    ServerStatus.CLIENT_CONNECTED -> {
                         appInfo("设备($obj)，连接成功，可以通信了")
                     }
                     ServerStatus.CLIENT_DISCONNECT -> {
@@ -98,14 +96,14 @@ class ServerActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
       //  BleSdk.getServer().release()
-        BleServer.get().release()
+        BleSdk.getServer().release()
     }
 
     fun send(view: View) {
        // BleSdk.getServer().closeServer()
        // BleSdk.getServer().send("hello world".toByteArray())
       //  BleSdk.getServer().send(msg.toByteArray(Charsets.UTF_8))
-        BleServer.get().send(msg.toByteArray(Charsets.UTF_8))
+        BleSdk.getServer().send(msg.toByteArray(Charsets.UTF_8))
     }
 
     private val msg = """

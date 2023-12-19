@@ -11,7 +11,6 @@ import android.content.Context
 import android.util.Log
 import com.cvte.blesdk.BleSdk
 import com.cvte.blesdk.GattStatus
-import com.cvte.blesdk.UUID_DESCRIBE
 import com.cvte.blesdk.UUID_READ_NOTIFY
 import com.cvte.blesdk.UUID_SERVICE
 import com.cvte.blesdk.UUID_WRITE

@@ -1,12 +1,7 @@
 package com.cvte.blesdk.server
 
-import android.Manifest
-import android.annotation.SuppressLint
-import android.app.AppOpsManager.OnOpNotedCallback
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseSettings
-import android.content.Context
-import android.os.Build
 import android.util.Log
 import androidx.core.util.forEach
 import androidx.core.util.size
@@ -28,24 +23,15 @@ class BleServer : AbsBle(BleSdk.context) {
     companion object {
         private const val TAG = "BleServer"
         private const val MAX_NAME_SIZE = 20
-        private const val MAX_MTU_SIZE = 512
-
-        @SuppressLint("StaticFieldLeak")
-        private val instance: BleServer = BleServer()
-
-        @Synchronized
-        fun get(): BleServer {
-            return instance
-        }
     }
 
     private var option: BleServerOption.Builder? = null
-    private var iBleListener: IBleListener? = null
+    private var iBleListener: IBleServerListener? = null
 
     private var gattServer: ServerGattChar? = null
 
     private var bleAdvServer: BleAdvServer? = null
-    fun startServer(bleOption: BleServerOption, iBleListener: IBleListener) {
+    fun startServer(bleOption: BleServerOption, iBleListener: IBleServerListener) {
         this.option = bleOption.builder
         this.iBleListener = iBleListener
         if (!checkPermission(iBleListener)) {
@@ -100,6 +86,9 @@ class BleServer : AbsBle(BleSdk.context) {
         bleAdvServer?.stopBroadcast()
         gattServer?.release()
     }
+    interface IBleServerListener:IBleListener{
+        fun onEvent(serverStatus: ServerStatus,obj:Any?)
+    }
 
     private fun startGattService() {
         pushLog("start gatt service: $gattServer")
@@ -125,11 +114,11 @@ class BleServer : AbsBle(BleSdk.context) {
                             obj?.let {
                                 val mac = obj as String
                                 bluetoothAdapter?.getRemoteDevice(mac)?.let {
-                                    iBleListener?.onEvent(ServerStatus.CLIENT_CONNECT,it)
+                                    iBleListener?.onEvent(ServerStatus.CLIENT_CONNECTED,it)
                                 }
                             }
                             pushLog("client ($obj) connected")
-                            iBleListener?.onEvent(ServerStatus.CLIENT_CONNECT,obj)
+                            iBleListener?.onEvent(ServerStatus.CLIENT_CONNECTED,obj)
                         }
                         else -> {
                             pushLog("$obj ,  status change:$status")

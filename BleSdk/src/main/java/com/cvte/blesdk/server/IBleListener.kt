@@ -8,6 +8,5 @@ import com.cvte.blesdk.ServerStatus
  * describe：
  */
 interface IBleListener {
-    fun onEvent(serverStatus: ServerStatus,obj:Any?)
     fun onFail(error: BleError,errorMsg:String)
 }

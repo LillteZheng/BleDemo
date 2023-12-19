@@ -8,13 +8,11 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.Build
 import android.os.Handler
-import androidx.core.content.PermissionChecker.PermissionResult
 import com.cvte.blesdk.BleError
-import com.cvte.blesdk.BleSdk
+import com.cvte.blesdk.ClientStatus
 import com.cvte.blesdk.GattStatus
 import com.cvte.blesdk.ScanBeacon
 import com.cvte.blesdk.abs.AbsBle
-import com.cvte.blesdk.abs.IBle
 import com.cvte.blesdk.characteristic.AbsCharacteristic
 import com.cvte.blesdk.characteristic.ClientGattChar
 import com.cvte.blesdk.server.IBleListener
@@ -25,13 +23,17 @@ import java.util.concurrent.atomic.AtomicBoolean
  * @author by zhengshaorui 2023/12/12
  * describe：
  */
-class BleClient(context: Context?) : AbsBle(context) {
-    private var listener: IBleClientListener? = null
+class BleClient(context: Context?) : AbsBle(context),IClientBle {
+    private var listener: IClientBle.IBleClientListener? = null
     private val isScanning = AtomicBoolean(false)
     private var gattChar:ClientGattChar? = null
-    fun startScan(listener: IBleClientListener) {
+    private var option: BleClientOption.Builder? = null
+    private var scanSuccess = false
+    override fun startScan(builder: BleClientOption, listener: IClientBle.IBleClientListener) {
+        scanSuccess = false
+        option = builder.builder
         //先关闭之前的连接
-       /* gattChar?.release()
+        gattChar?.release()
         this.listener = listener
         if (!checkPermission(listener)) {
             return
@@ -40,40 +42,64 @@ class BleClient(context: Context?) : AbsBle(context) {
             return
         }
         isScanning.set(true)
+        pushLog("start scan")
         bluetoothAdapter?.bluetoothLeScanner?.startScan(null, configScanSession().build(), scanCallback)
         Handler().postDelayed({
             stopScan()
-        }, 5000)*/
+            if (!scanSuccess){
+                listener.onEvent(ClientStatus.SCAN_FAILED,"scan failed,please try again")
+            }
+        }, 5000)
     }
 
-    fun connect(dev:BluetoothDevice,autoConnect:Boolean){
+    override fun connect(dev:BluetoothDevice){
       //  dev.connectGatt(BleSdk.context!!,autoConnect,)
         if (gattChar == null) {
             gattChar = ClientGattChar(object : AbsCharacteristic.IGattListener {
                 override fun onEvent(status: GattStatus, obj: Any?) {
-                    listener?.onLog("onEvent status = $status,obj = $obj")
+                  //  pushLog("status: $status,obj:$obj")
                     if (status == GattStatus.CLIENT_DISCONNECTED){
                         release()
+                    }
+                    when(status){
+                        GattStatus.CLIENT_CONNECTED -> {
+                            listener?.onEvent(ClientStatus.SERVER_CONNECTED,obj)
+                        }
+                        GattStatus.CLIENT_DISCONNECTED -> {
+                            listener?.onEvent(ClientStatus.SERVER_DISCONNECTED,obj)
+                            release()
+                        }
+                        else -> {
+                            pushLog("status: $status,obj:$obj")
+                        }
                     }
                 }
 
             })
         }
-        gattChar?.connectGatt(dev,autoConnect)
+        pushLog("connect to ${dev.name}")
+        gattChar?.connectGatt(dev,bluetoothAdapter?.name,false)
     }
 
     override fun send(data:ByteArray){
         gattChar?.send(data)
     }
 
-    fun stopScan() {
+
+    override fun stopScan() {
         if (isScanning.get()) {
             bluetoothAdapter?.bluetoothLeScanner?.stopScan(scanCallback)
             isScanning.set(false)
         }
     }
 
-    fun release(){
+
+
+    override fun disconnect() {
+        release()
+    }
+
+    override fun release(){
         stopScan()
         gattChar?.release()
         gattChar = null
@@ -87,7 +113,13 @@ class BleClient(context: Context?) : AbsBle(context) {
             result ?: return
             result.device.name ?: return
 
-            listener?.onScanResult(ScanBeacon(result.device.name, result.rssi,result.device,result.scanRecord))
+            option?.fliter?.let {
+                if (!result.device.name.contains(it)){
+                    return
+                }
+            }
+            scanSuccess = true
+            listener?.onEvent(ClientStatus.SCAN_RESULT,ScanBeacon(result.device.name, result.rssi,result.device,result.scanRecord))
         }
 
 
@@ -116,9 +148,6 @@ class BleClient(context: Context?) : AbsBle(context) {
         return permission
     }
 
-    interface IBleClientListener:IBle{
-        fun onScanResult(beacon: ScanBeacon)
-    }
 
 
     private fun configScanSession():ScanSettings.Builder{
@@ -149,6 +178,9 @@ class BleClient(context: Context?) : AbsBle(context) {
         }
 
         return builder
+    }
+    private fun pushLog(msg:String){
+        option?.logListener?.onLog(msg)
     }
 
 }
