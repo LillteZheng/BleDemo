@@ -21,8 +21,8 @@
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:onClick="readData"
-        android:text="读取数据"/>
+        android:onClick="disconnect"
+        android:text="断开连接"/>
 
     <EditText
         android:id="@+id/edit"

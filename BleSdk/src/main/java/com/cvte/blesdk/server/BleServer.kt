@@ -2,15 +2,13 @@ package com.cvte.blesdk.server
 
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseSettings
-import android.media.MediaSession2Service
-import android.os.Handler
-import android.os.HandlerThread
-import android.os.Looper
 import android.os.Message
 import com.cvte.blesdk.BleError
+import com.cvte.blesdk.DataPackageManager
 import com.cvte.blesdk.BleSdk
 import com.cvte.blesdk.DATA_TYPE
 import com.cvte.blesdk.GattStatus
+import com.cvte.blesdk.MTU_TYPE
 import com.cvte.blesdk.ServerStatus
 import com.cvte.blesdk.abs.AbsBle
 import com.cvte.blesdk.abs.IBle
@@ -26,6 +24,7 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
         private const val TAG = "BleServer"
         private const val MAX_NAME_SIZE = 20
         private const val MSG_WAIT_NAME = 0x01
+        private const val MSG_RESTART_AD = 0x02
         private const val TIME_OUT = 1000L
     }
 
@@ -34,8 +33,7 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
     private var gattServer: ServerGattChar? = null
     private var bleAdvServer: BleAdvServer? = null
 
-    private var handlerThread: HandlerThread? = null
-    private var handler: Handler? = null
+    private var clientName = "null"
 
     override fun startServer(bleOption: BleServerOption, iBleListener: IServerBle.IBleEventListener) {
         this.option = bleOption.builder
@@ -48,18 +46,6 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
                 "gatt is connected,please disconnect first")
             return
         }
-
-        if (handler == null) {
-            handlerThread = object : HandlerThread("ble_server") {
-                override fun onLooperPrepared() {
-                    super.onLooperPrepared()
-                    pushLog("wait name")
-                    handler = Handler(Looper.myLooper()!!, callback)
-                }
-            }
-            handlerThread?.start()
-        }
-        //先关闭之前的广播和服务
         closeServer()
         //开启广播
         if (bleAdvServer == null) {
@@ -71,12 +57,24 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
 
     }
 
-    private val callback = Handler.Callback {
-        pushLog("wait name timeout: ${it.obj} ${it.what}")
-        if (it.what == MSG_WAIT_NAME) {
-            iBleListener?.onEvent(ServerStatus.CLIENT_CONNECTED, it.obj as String)
+
+    override fun handleMessage(msg: Message) {
+        super.handleMessage(msg)
+        when(msg.what){
+            MSG_WAIT_NAME->{
+                val name = msg.obj?.let { mag->
+                    mag as String
+                }?:"null"
+                iBleListener?.onEvent(ServerStatus.CLIENT_CONNECTED, name)
+            }
+            MSG_RESTART_AD->{
+                if (bleAdvServer == null) {
+                    bleAdvServer = BleAdvServer(bluetoothAdapter!!)
+                }
+                bleAdvServer?.startBroadcast(advertiseCallback)
+            }
         }
-        true
+
     }
 
     private fun pushLog(msg: String) {
@@ -84,13 +82,12 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
     }
 
     override fun release() {
+        DataPackageManager.resetBuffer()
         bleAdvServer?.stopBroadcast()
         bleAdvServer = null
         gattServer?.release()
         gattServer = null
-        handlerThread?.quit()
-        handlerThread = null
-        handler = null
+        releaseHandle()
 
     }
 
@@ -102,11 +99,13 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
 
 
     override fun closeServer() {
+        DataPackageManager.resetBuffer()
         pushLog("close server if need: bleAdvServer:$bleAdvServer, gattServer:$gattServer")
         bleAdvServer?.stopBroadcast()
         gattServer?.release()
         bleAdvServer = null
         gattServer = null
+
     }
 
 
@@ -124,10 +123,10 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
                         }
 
                         GattStatus.SERVER_DISCONNECTED -> {
-                            pushLog("client ($obj) disconnect,reset advertise and gatt service")
+                            pushLog("client ($clientName) disconnect,reset advertise and gatt service")
+                            iBleListener?.onEvent(ServerStatus.CLIENT_DISCONNECT,clientName)
                             closeServer()
-                            bleAdvServer?.startBroadcast(advertiseCallback)
-                            iBleListener?.onEvent(ServerStatus.CLIENT_DISCONNECT,obj)
+                            handler?.sendEmptyMessageDelayed(MSG_RESTART_AD,500)
                         }
 
                         GattStatus.SERVER_CONNECTED->{
@@ -141,12 +140,16 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
                         GattStatus.BLUE_NAME->{
                             pushLog("client name:$obj")
                             //iBleListener?.onEvent(ServerStatus.CLIENT_CONNECTED,obj)
+                            clientName = obj!!
                             handler?.removeMessages(MSG_WAIT_NAME)
                             Message.obtain().apply {
                                 what = MSG_WAIT_NAME
                                 this.obj = obj
                                 handler?.sendMessage(this)
                             }
+                        }
+                        GattStatus.MTU->{
+                            sendData(MTU_TYPE,byteArrayOf(0x00))
                         }
                         else -> {
                             pushLog("$obj ,  status change:$status")
@@ -199,12 +202,18 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
         }
     }
 
+
     override fun send(data: ByteArray){
-        subSend(data, DATA_TYPE)
+        sendData(DATA_TYPE,data)
     }
 
-    override fun sendData(data: ByteArray) {
-        gattServer?.send(data)
+    private fun sendData(type:Byte,data: ByteArray){
+        DataPackageManager.splitPacket(data, type, object : DataPackageManager.ISplitListener {
+            override fun onResult(data: ByteArray) {
+                gattServer?.send(data)
+            }
+
+        })
     }
 
 

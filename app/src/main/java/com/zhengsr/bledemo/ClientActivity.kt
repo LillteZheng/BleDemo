@@ -109,10 +109,7 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
 
             override fun onEvent(status: ClientStatus, obj: String?) {
                 when(status){
-                    ClientStatus.SCAN_RESULT->{
-                        val beacon = obj as ScanBeacon
 
-                    }
                     ClientStatus.SERVER_CONNECTED->{
                         appInfo("连接上服务端：$obj")
                     }
@@ -159,5 +156,10 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
     override fun onDestroy() {
         super.onDestroy()
         BleSdk.getClient().release()
+    }
+
+    fun disconnect(view: View) {
+        appInfo("断开连接")
+        BleSdk.getClient().disconnect()
     }
 }

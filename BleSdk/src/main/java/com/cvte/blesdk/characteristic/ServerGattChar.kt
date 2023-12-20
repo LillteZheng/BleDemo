@@ -3,17 +3,16 @@ package com.cvte.blesdk.characteristic
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
-import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattServer
 import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.util.Log
+import com.cvte.blesdk.DataPackageManager
 import com.cvte.blesdk.BleSdk
 import com.cvte.blesdk.GattStatus
 import com.cvte.blesdk.UUID_READ_NOTIFY
 import com.cvte.blesdk.UUID_SERVICE
-import com.cvte.blesdk.UUID_WRITE
 import com.cvte.blesdk.server.BleServerOption
 
 /**
@@ -106,13 +105,25 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener,"serv
             value
         )
        // listener.onEvent(GattStatus.SERVER_WRITE,value)
-        pushLog("hello")
         //需要setResponse，不然客户端会一直等待
         bluetoothGattServer?.sendResponse(device,requestId,
             BluetoothGatt.GATT_SUCCESS,offset,"2".toByteArray())
         value?.let {
-            packetData(value)
+            //packetData(value)
+            DataPackageManager.packageData(value,object :DataPackageManager.IPackageListener{
+                override fun onResult(type: GattStatus, data: ByteArray) {
+                    listener.onEvent(type, String(data))
+                }
+
+            })
         }
+    }
+
+    override fun onServerMtuChanged(device: BluetoothDevice?, mtu: Int) {
+        super.onServerMtuChanged(device, mtu)
+        DataPackageManager.setMtu(mtu)
+        pushLog("onServerMtuChanged() called with: device = $device, mtu = $mtu")
+        listener.onEvent(GattStatus.MTU,null)
     }
 
 
@@ -132,15 +143,17 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener,"serv
         }
     }
 
-    override fun send(data: ByteArray) {
+    override fun send(data: ByteArray) :Boolean{
+        var isSuccess = false
         if (isConnected()) {
             connectDevice?.let {
                 bluetoothGattServer?.getService(UUID_SERVICE)?.getCharacteristic(UUID_READ_NOTIFY)
                     ?.apply {
                         value = data
-                        bluetoothGattServer?.notifyCharacteristicChanged(connectDevice!!, this, false)
+                        isSuccess = bluetoothGattServer?.notifyCharacteristicChanged(connectDevice!!, this, false) == true
                     }
             }
         }
+        return isSuccess
     }
 }

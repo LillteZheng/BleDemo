@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattServerCallback
 import android.util.Log
+import com.cvte.blesdk.DataPackageManager
 import com.cvte.blesdk.DATA_TYPE
 import com.cvte.blesdk.FORMAT_LEN
 import com.cvte.blesdk.GattStatus
@@ -39,6 +40,7 @@ abstract class AbsCharacteristic(val listener: IGattListener, tag: String) {
     }
 
     protected open fun onServerStateChange(device: BluetoothDevice?, status: Int, newState: Int) {}
+    protected open fun onServerMtuChanged(device: BluetoothDevice?, mtu: Int){}
 
     protected val gattServerCallback = object : BluetoothGattServerCallback() {
         override fun onConnectionStateChange(device: BluetoothDevice?, status: Int, newState: Int) {
@@ -141,7 +143,8 @@ abstract class AbsCharacteristic(val listener: IGattListener, tag: String) {
 
         override fun onMtuChanged(device: BluetoothDevice?, mtu: Int) {
             super.onMtuChanged(device, mtu)
-            Log.d(TAG, "onMtuChanged() called with: device = $device, mtu = $mtu")
+           //
+            onServerMtuChanged(device,mtu)
         }
     }
 
@@ -222,49 +225,12 @@ abstract class AbsCharacteristic(val listener: IGattListener, tag: String) {
     open fun release() {
     }
 
-    abstract fun send(data: ByteArray)
+    abstract fun send(data: ByteArray):Boolean
 
     protected open fun pushLog(msg: String) {
         listener.onEvent(GattStatus.LOG, "$TAG: $msg")
     }
 
-    private var buffer: ByteBuffer? = null
-    private var type = DATA_TYPE
-    protected fun packetData(value: ByteArray) {
-        try {
-            if (value[0] == 0x78.toByte() && value.size >= FORMAT_LEN) {
-                type = value[1]
-                val len = ((value[2].toInt() shl 8) or (value[3].toInt() and 0xFF))
-                pushLog("receiver data ,type = ${type.toInt()},len = $len")
-                buffer = ByteBuffer.allocate(len).apply {
-                    put(value, FORMAT_LEN, value.size - FORMAT_LEN)
-                    if (position() >= limit()) {
-                        val type = if (type == NAME_TYPE){
-                            GattStatus.BLUE_NAME
-                        }else{
-                            GattStatus.CLIENT_READ
-                        }
-                        listener.onEvent(type, String(array()))
-                    }
-                }
 
-
-            } else {
-                buffer?.apply {
-                    put(value)
-                    if (position() >= limit()) {
-                        val type = if (type == NAME_TYPE){
-                            GattStatus.BLUE_NAME
-                        }else{
-                            GattStatus.CLIENT_READ
-                        }
-                        listener.onEvent(type, String(array()))
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            pushLog("receiver data error:$e")
-        }
-    }
 
 }

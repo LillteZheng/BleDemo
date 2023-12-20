@@ -5,7 +5,10 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothProfile
 import android.os.Build
+import android.util.Log
 import com.cvte.blesdk.BleSdk
+import com.cvte.blesdk.DATA_TYPE
+import com.cvte.blesdk.DataPackageManager
 import com.cvte.blesdk.GattStatus
 import com.cvte.blesdk.UUID_READ_NOTIFY
 import com.cvte.blesdk.UUID_SERVICE
@@ -18,6 +21,9 @@ import java.util.concurrent.ConcurrentLinkedQueue
  * describe：
  */
 class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "client") {
+    companion object{
+        const val MTU = 500
+    }
     private var blueGatt: BluetoothGatt? = null
     fun connectGatt(dev: BluetoothDevice, autoConnect: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -45,14 +51,17 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         }
     }
 
-    private var count = 0
-    private var max = 0
-    private var buffer: ByteBuffer? = null
     override fun onClientRead(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?) {
         super.onClientRead(gatt, characteristic)
         characteristic?.let {
             it.value?.let { value ->
-                packetData(value)
+              //  packetData(value)
+                DataPackageManager.packageData(value, object : DataPackageManager.IPackageListener {
+                    override fun onResult(type: GattStatus, data: ByteArray) {
+                        listener.onEvent(type, String(data))
+                    }
+
+                })
             }
         }
     }
@@ -60,21 +69,15 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
     override fun onClientConnectService(gatt: BluetoothGatt?, status: Int) {
         super.onClientConnectService(gatt, status)
         blueGatt = gatt
-        //设置一个notify，用来监听外设信息
-        pushLog(
-            "onClientConnectService: ${gatt?.device?.name},is can get service: ${
-                gatt?.getService(
-                    UUID_SERVICE
-                )
-            }"
-        )
+        gatt?.requestMtu(MTU)
+        DataPackageManager.setMtu(MTU)
+
         gatt?.getService(UUID_SERVICE)?.let {
             it.getCharacteristic(UUID_READ_NOTIFY)?.let { char ->
                 val isSuccess = gatt.setCharacteristicNotification(char, true)
                 pushLog("setCharacteristicNotification: $isSuccess")
             }
         }
-        //  blueGatt?.setCharacteristicNotification()
         if (status == BluetoothGatt.GATT_SUCCESS) {
             listener.onEvent(GattStatus.CLIENT_CONNECTED, gatt?.device?.name)
         } else {
@@ -83,11 +86,12 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         }
         pushLog("connect to gatt Service,now you can communicate with it")
         //先发送蓝牙名字
-        listener.onEvent(GattStatus.BLUE_NAME, null)
+       // listener.onEvent(GattStatus.BLUE_NAME, null)
+
     }
 
     private val queue = ConcurrentLinkedQueue<ByteArray>()
-    override fun send(data: ByteArray) {
+    override fun send(data: ByteArray):Boolean {
         var isSuccess = false
         //uuid 是一对的
 
@@ -99,7 +103,7 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         if (!isSuccess) {
             queue.add(data)
         }
-
+        return isSuccess
     }
 
     override fun onServerResponse(

@@ -9,6 +9,7 @@ import android.content.Context
 import android.os.Build
 import android.os.Handler
 import com.cvte.blesdk.BleError
+import com.cvte.blesdk.DataPackageManager
 import com.cvte.blesdk.ClientStatus
 import com.cvte.blesdk.DATA_TYPE
 import com.cvte.blesdk.GattStatus
@@ -26,6 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * describe：
  */
 class BleClient(context: Context?) : AbsBle(context),IClientBle {
+
     private var listener: IClientBle.IBleEventListener? = null
     private val isScanning = AtomicBoolean(false)
     private var gattChar:ClientGattChar? = null
@@ -51,15 +53,18 @@ class BleClient(context: Context?) : AbsBle(context),IClientBle {
             if (!scanSuccess){
                 listener.onEvent(ClientStatus.SCAN_FAILED,"scan failed,please try again")
             }
-        }, 5000)
+        }, option!!.scanTime)
     }
 
+    /**
+     * 加重试机制
+     */
     override fun connect(dev:BluetoothDevice){
       //  dev.connectGatt(BleSdk.context!!,autoConnect,)
         if (gattChar == null) {
             gattChar = ClientGattChar(object : AbsCharacteristic.IGattListener {
                 override fun onEvent(status: GattStatus, obj: String?) {
-                  //  pushLog("status: $status,obj:$obj")
+                    pushLog("status: $status,obj:$obj")
                     if (status == GattStatus.CLIENT_DISCONNECTED){
                         release()
                     }
@@ -76,8 +81,12 @@ class BleClient(context: Context?) : AbsBle(context),IClientBle {
                         }
                         GattStatus.BLUE_NAME->{
                             val name = bluetoothAdapter?.name?:"null"
-                            subSend(name.toByteArray(),NAME_TYPE)
-
+                            sendData(name.toByteArray(), NAME_TYPE)
+                        }
+                        GattStatus.MTU ->{
+                            val name = bluetoothAdapter?.name?:"null"
+                            pushLog("sha? $name")
+                            sendData(name.toByteArray(), NAME_TYPE)
                         }
                         else -> {
                             pushLog("status: $status,obj:$obj")
@@ -93,12 +102,20 @@ class BleClient(context: Context?) : AbsBle(context),IClientBle {
 
     override fun send(data:ByteArray){
        // gattChar?.send(data)
-        subSend(data, DATA_TYPE)
+        sendData(data, DATA_TYPE)
     }
 
-    override fun sendData(data: ByteArray) {
-        gattChar?.send(data)
+     fun sendData(data: ByteArray,type:Byte) {
+         DataPackageManager.splitPacket(data, type, object : DataPackageManager.ISplitListener {
+             override fun onResult(data: ByteArray) {
+                 val isSuccess = gattChar?.send(data)
+                 pushLog("send success: $isSuccess")
+             }
+
+
+         })
     }
+
 
 
     override fun stopScan() {

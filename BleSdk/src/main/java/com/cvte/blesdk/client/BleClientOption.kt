@@ -17,6 +17,11 @@ class BleClientOption private constructor(val builder: Builder)  {
         internal var serviceUUid = UUID_SERVICE
         internal var writeUuid = UUID_WRITE
         internal var readAndNotifyUuid = UUID_READ_NOTIFY
+        internal var scanTime: Long = 5000L
+        fun scanTime(scanTime: Long): Builder{
+            this.scanTime = scanTime
+            return this
+        }
         fun serviceUuid(serviceUUid: UUID): Builder {
             this.serviceUUid = serviceUUid
             return this

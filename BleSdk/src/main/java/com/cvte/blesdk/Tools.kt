@@ -19,6 +19,7 @@ enum class GattStatus{
     //服务端
     SERVER_CONNECTED,
     SERVER_DISCONNECTED,
+    MTU,
     SERVER_WRITE,
 
     //客户端
@@ -31,7 +32,6 @@ enum class GattStatus{
 
 
 enum class ClientStatus{
-    SCAN_RESULT,
     SERVER_CONNECTED,
     SERVER_DISCONNECTED,
     SCAN_FAILED,
@@ -50,6 +50,7 @@ val UUID_WRITE = UUID.fromString("12000000-0000-0000-0000-000000000000")
 val DATA_FLAG = 0X78.toByte()
 val NAME_TYPE = 0X00.toByte()
 val DATA_TYPE = 0X01.toByte()
+val MTU_TYPE = 0X02.toByte()
 val FORMAT_LEN = 4
 
 

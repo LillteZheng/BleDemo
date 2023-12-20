@@ -50,7 +50,7 @@ class ServerActivity : AppCompatActivity() {
     @SuppressLint("MissingPermission")
     fun openServer(view: View) {
         val option = BleServerOption.Builder()
-            .name("Vieunite_987654321")
+            .name("Vieunite_345663")
             .logListener(object : BleServerOption.ILogListener {
                 override fun onLog(log: String) {
                     Log.d(TAG, "$log")
