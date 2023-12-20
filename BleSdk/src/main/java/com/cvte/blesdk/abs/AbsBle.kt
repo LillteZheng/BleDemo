@@ -1,17 +1,13 @@
 package com.cvte.blesdk.abs
 
-import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.os.Build
 import androidx.core.util.forEach
 import com.cvte.blesdk.BleError
-import com.cvte.blesdk.sender.IClientBle
-import com.cvte.blesdk.server.BleServerOption
-import com.cvte.blesdk.server.IBleListener
+import com.cvte.blesdk.DATA_FLAG
 import com.cvte.blesdk.utils.BleUtil
-import java.security.Key
 
 /**
  * @author by zhengshaorui 2023/12/13
@@ -20,7 +16,7 @@ import java.security.Key
 abstract class AbsBle(val context: Context?) {
 
     companion object{
-        private const val MAX_DATA_SIZE = 19
+         const val MAX_DATA_SIZE = 15
     }
 
 
@@ -30,7 +26,7 @@ abstract class AbsBle(val context: Context?) {
         bluetoothManager.adapter
     }
 
-    protected open fun checkPermission(listener:IBleListener):Boolean{
+    protected open fun checkPermission(listener:IBle.IListener):Boolean{
         if (context == null){
             listener.onFail(BleError.CONTEXT_NULL,"context is null,please use BleSdk.init(context) first")
             return false
@@ -69,33 +65,44 @@ abstract class AbsBle(val context: Context?) {
      * 发送数据，采用以下格式
      * 第一个表示标志位采用两个字节，表示uuid后四位
      * 第二个表示类型，采用1个字节，比如notify，wirite等
-     * 第三个表示数据长度：考虑到超过255，所以采用3个字节
-     * 第四个表示数据，最大19个字节，如果设置了 mtu，则最大为 mtu
+     * 第三个表示数据长度：考虑到超过255，所以采用2个字节
+     * 第四个表示数据，最大14个字节，如果设置了 mtu，则最大为 mtu - 5
      * 如果有 uuid 标志位，则表示是第一包，否则表示是后续包
-     * 0               8               16              24            31
+     *  0               8               16              24            31
      *  0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
      * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |      UUID     |  flag |          len          |               |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+               +
+     * |              UUID             |      type     |      len      |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |               |                                               |
+     * +-+-+-+-+-+-+-+-+                                               +
      * |                                                               |
      * +                                                               +
      * |                            payload                            |
-     * +                                                               +
-     * |                                                               |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     *
-     *
+     * +                                               +-+-+-+-+-+-+-+-+
+     * |                                               |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      */
-    open fun send(data: ByteArray){
+
+   protected fun subSend(data: ByteArray,type:Byte){
         val datas = BleUtil.subpackage(data, MAX_DATA_SIZE)
-        if (data.size > 1){
-            datas.forEach { index, bytes ->
-                if (index == 0){
-                }else{
-
-                }
-
+        datas.forEach { index, bytes ->
+            if (index == 0){
+                //第一个包，包含所有的标志位
+                //两个字节，表示数据长度
+                val highByte = (data.size shr 8).toByte()
+                val lowByte = (data.size and 0xFF).toByte()
+                sendData(byteArrayOf(DATA_FLAG,type,highByte,lowByte).plus(bytes))
+            }else{
+                sendData(bytes)
             }
+
         }
-    }
+   }
+
+
+
+
+    protected abstract fun sendData(data: ByteArray)
+
+
 }

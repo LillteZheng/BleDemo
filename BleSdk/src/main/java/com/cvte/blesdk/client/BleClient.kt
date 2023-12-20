@@ -1,4 +1,4 @@
-package com.cvte.blesdk.sender
+package com.cvte.blesdk.client
 
 import android.Manifest
 import android.bluetooth.BluetoothDevice
@@ -10,12 +10,14 @@ import android.os.Build
 import android.os.Handler
 import com.cvte.blesdk.BleError
 import com.cvte.blesdk.ClientStatus
+import com.cvte.blesdk.DATA_TYPE
 import com.cvte.blesdk.GattStatus
+import com.cvte.blesdk.NAME_TYPE
 import com.cvte.blesdk.ScanBeacon
 import com.cvte.blesdk.abs.AbsBle
+import com.cvte.blesdk.abs.IBle
 import com.cvte.blesdk.characteristic.AbsCharacteristic
 import com.cvte.blesdk.characteristic.ClientGattChar
-import com.cvte.blesdk.server.IBleListener
 import com.cvte.blesdk.utils.BleUtil
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -24,12 +26,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  * describe：
  */
 class BleClient(context: Context?) : AbsBle(context),IClientBle {
-    private var listener: IClientBle.IBleClientListener? = null
+    private var listener: IClientBle.IBleEventListener? = null
     private val isScanning = AtomicBoolean(false)
     private var gattChar:ClientGattChar? = null
     private var option: BleClientOption.Builder? = null
     private var scanSuccess = false
-    override fun startScan(builder: BleClientOption, listener: IClientBle.IBleClientListener) {
+    override fun startScan(builder: BleClientOption, listener: IClientBle.IBleEventListener) {
         scanSuccess = false
         option = builder.builder
         //先关闭之前的连接
@@ -69,6 +71,14 @@ class BleClient(context: Context?) : AbsBle(context),IClientBle {
                             listener?.onEvent(ClientStatus.SERVER_DISCONNECTED,obj)
                             release()
                         }
+                        GattStatus.CLIENT_READ->{
+                            listener?.onEvent(ClientStatus.SERVER_WRITE,obj)
+                        }
+                        GattStatus.BLUE_NAME->{
+                            val name = obj as String
+                            subSend(name.toByteArray(),NAME_TYPE)
+
+                        }
                         else -> {
                             pushLog("status: $status,obj:$obj")
                         }
@@ -82,6 +92,11 @@ class BleClient(context: Context?) : AbsBle(context),IClientBle {
     }
 
     override fun send(data:ByteArray){
+       // gattChar?.send(data)
+        subSend(data, DATA_TYPE)
+    }
+
+    override fun sendData(data: ByteArray) {
         gattChar?.send(data)
     }
 
@@ -125,7 +140,7 @@ class BleClient(context: Context?) : AbsBle(context),IClientBle {
 
     }
 
-    override fun checkPermission(listener: IBleListener): Boolean {
+    override fun checkPermission(listener: IBle.IListener): Boolean {
         var permission = super.checkPermission(listener)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (!BleUtil.isGpsOpen(context)) {

@@ -25,7 +25,7 @@ enum class GattStatus{
     CLIENT_CONNECTED,
     CLIENT_DISCONNECTED,
     CLIENT_READ,
-
+    BLUE_NAME,
     LOG
 }
 
@@ -44,11 +44,13 @@ enum class ServerStatus{
     CLIENT_WRITE
 }
 
-val UUID_WRITE_SUB = "1212"
-val UUID_READ_NOTIFY_SUB = "1213"
-val UUID_SERVICE = UUID.fromString("10000000-0000-0000-0000-000000001211")
-val UUID_READ_NOTIFY = UUID.fromString("11000000-0000-0000-0000-00000000$UUID_READ_NOTIFY_SUB")
-val UUID_WRITE = UUID.fromString("12000000-0000-0000-0000-00000000$UUID_WRITE_SUB")
+val UUID_SERVICE = UUID.fromString("10000000-0000-0000-0000-000000000000")
+val UUID_READ_NOTIFY = UUID.fromString("11000000-0000-0000-0000-000000000000")
+val UUID_WRITE = UUID.fromString("12000000-0000-0000-0000-000000000000")
+val DATA_FLAG = 0X78.toByte()
+val NAME_TYPE = 0X00.toByte()
+val DATA_TYPE = 0X01.toByte()
+val FORMAT_LEN = 4
 
 
 data class ScanBeacon(val name:String?,val rssi:Int,val device:BluetoothDevice?,val record:ScanRecord?)

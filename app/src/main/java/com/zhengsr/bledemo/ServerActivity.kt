@@ -12,9 +12,8 @@ import androidx.core.app.ActivityCompat
 import com.cvte.blesdk.BleError
 import com.cvte.blesdk.BleSdk
 import com.cvte.blesdk.ServerStatus
-import com.cvte.blesdk.server.BleServer
 import com.cvte.blesdk.server.BleServerOption
-import com.cvte.blesdk.server.IBleListener
+import com.cvte.blesdk.server.IServerBle
 import com.zhengsr.bledemo.databinding.ActivityServerBinding
 
 class ServerActivity : AppCompatActivity() {
@@ -58,7 +57,7 @@ class ServerActivity : AppCompatActivity() {
                 }
             }).build()
 
-        BleSdk.getServer().startServer(option, object : BleServer.IBleServerListener {
+        BleSdk.getServer().startServer(option, object : IServerBle.IBleEventListener {
             override fun onEvent(serverStatus: ServerStatus, obj: Any?) {
                 when(serverStatus){
                     ServerStatus.ADVERTISE_SUCCESS -> {
@@ -71,7 +70,7 @@ class ServerActivity : AppCompatActivity() {
                         appInfo("设备($obj)，断开连接")
                     }
                     ServerStatus.CLIENT_WRITE->{
-                        appInfo("收到数据: ${String(obj as ByteArray)}")
+                        appInfo("收到数据: $obj")
                     }
                     else -> {
                         appInfo("事件: serverStatus = $serverStatus, obj = $obj")
@@ -100,14 +99,13 @@ class ServerActivity : AppCompatActivity() {
     }
 
     fun send(view: View) {
-       // BleSdk.getServer().closeServer()
-       // BleSdk.getServer().send("hello world".toByteArray())
-      //  BleSdk.getServer().send(msg.toByteArray(Charsets.UTF_8))
-        BleSdk.getServer().send(msg.toByteArray(Charsets.UTF_8))
+        Log.d(TAG, "zsr send: ${msg.length} ${msg.toByteArray().size}")
+        val msg = binding.editMsg.text.trim().toString()
+        BleSdk.getServer().send(msg.toByteArray())
     }
 
     private val msg = """
-        
+        123344
         So I’ve faced some issues with a BLE read, and here is the best summary I have:
 
         “Receive String” works on a READ characteristic

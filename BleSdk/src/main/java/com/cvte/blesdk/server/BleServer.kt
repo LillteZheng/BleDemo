@@ -2,36 +2,33 @@ package com.cvte.blesdk.server
 
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseSettings
-import android.util.Log
-import androidx.core.util.forEach
-import androidx.core.util.size
 import com.cvte.blesdk.BleError
 import com.cvte.blesdk.BleSdk
+import com.cvte.blesdk.DATA_TYPE
 import com.cvte.blesdk.GattStatus
 import com.cvte.blesdk.ServerStatus
 import com.cvte.blesdk.abs.AbsBle
+import com.cvte.blesdk.abs.IBle
 import com.cvte.blesdk.characteristic.AbsCharacteristic
 import com.cvte.blesdk.characteristic.ServerGattChar
-import com.cvte.blesdk.utils.BleUtil
-import java.nio.ByteBuffer
 
 /**
  * @author by zhengshaorui 2023/12/12
  * describe：蓝牙服务端，主要负责发送广播，开启蓝牙服务
  */
-class BleServer : AbsBle(BleSdk.context) {
+class BleServer : AbsBle(BleSdk.context),IServerBle {
     companion object {
         private const val TAG = "BleServer"
         private const val MAX_NAME_SIZE = 20
     }
 
     private var option: BleServerOption.Builder? = null
-    private var iBleListener: IBleServerListener? = null
+    private var iBleListener: IServerBle.IBleEventListener? = null
 
     private var gattServer: ServerGattChar? = null
 
     private var bleAdvServer: BleAdvServer? = null
-    fun startServer(bleOption: BleServerOption, iBleListener: IBleServerListener) {
+    override fun startServer(bleOption: BleServerOption, iBleListener: IServerBle.IBleEventListener) {
         this.option = bleOption.builder
         this.iBleListener = iBleListener
         if (!checkPermission(iBleListener)) {
@@ -54,7 +51,7 @@ class BleServer : AbsBle(BleSdk.context) {
         option?.logListener?.onLog(msg)
     }
 
-    fun release() {
+    override fun release() {
         bleAdvServer?.stopBroadcast()
         bleAdvServer = null
         gattServer?.release()
@@ -62,33 +59,15 @@ class BleServer : AbsBle(BleSdk.context) {
     }
 
 
-    override fun send(data: ByteArray) {
-        val subpackage = BleUtil.subpackage(data, 19)
-        //todo 分包时，可以抽象类，先发大小，再发数据
-        if (subpackage.size > 1) {
-            gattServer?.send("_len${data.size}".toByteArray())
-            gattServer?.send("_count${subpackage.size}".toByteArray())
-        }
-        val buffer = ByteBuffer.allocate(data.size)
-        subpackage.forEach { key, value ->
-            gattServer?.send(value)
-            Log.d(TAG, "zsr send: $key,${value.size}")
-            buffer.put(value)
-        }
-        Log.d(TAG, "zsr send data:${String(buffer.array())}")
-        /* subpackage.forEach { key, value ->
-             gattServer?.send(value)
-         }*/
-    }
 
-    fun closeServer() {
+
+
+    override fun closeServer() {
         pushLog("close server if need: bleAdvServer:$bleAdvServer, gattServer:$gattServer")
         bleAdvServer?.stopBroadcast()
         gattServer?.release()
     }
-    interface IBleServerListener:IBleListener{
-        fun onEvent(serverStatus: ServerStatus,obj:Any?)
-    }
+
 
     private fun startGattService() {
         pushLog("start gatt service: $gattServer")
@@ -98,8 +77,8 @@ class BleServer : AbsBle(BleSdk.context) {
                 override fun onEvent(status: GattStatus, obj: Any?) {
                     pushLog("server status change:$status")
                     when (status) {
-                        GattStatus.SERVER_WRITE -> {
-                            pushLog("client: write data:${String(obj as ByteArray)}")
+                        GattStatus.CLIENT_READ -> {
+                          //  pushLog("receiver data:${String(obj as ByteArray)}")
                             iBleListener?.onEvent(ServerStatus.CLIENT_WRITE, obj)
                         }
 
@@ -119,6 +98,10 @@ class BleServer : AbsBle(BleSdk.context) {
                             }
                             pushLog("client ($obj) connected")
                             iBleListener?.onEvent(ServerStatus.CLIENT_CONNECTED,obj)
+                        }
+                        GattStatus.BLUE_NAME->{
+                            pushLog("client name:$obj")
+                            iBleListener?.onEvent(ServerStatus.CLIENT_WRITE,obj)
                         }
                         else -> {
                             pushLog("$obj ,  status change:$status")
@@ -171,13 +154,21 @@ class BleServer : AbsBle(BleSdk.context) {
         }
     }
 
+    override fun send(data: ByteArray){
+        subSend(data, DATA_TYPE)
+    }
+
+    override fun sendData(data: ByteArray) {
+        gattServer?.send(data)
+    }
+
 
     private fun fail(error: BleError, msg: String) {
         iBleListener?.onFail(error, msg)
     }
 
 
-    override fun checkPermission(listener: IBleListener): Boolean {
+    override fun checkPermission(listener: IBle.IListener): Boolean {
         var permission =  super.checkPermission(listener)
         if(option?.name == null || option?.name?.length!! > MAX_NAME_SIZE){
             listener.onFail(BleError.PERMISSION_DENIED,"name is null or length > $MAX_NAME_SIZE")

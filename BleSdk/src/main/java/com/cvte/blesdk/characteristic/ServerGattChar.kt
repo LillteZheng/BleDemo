@@ -105,9 +105,14 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener,"serv
             offset,
             value
         )
-        //回复客户端
+       // listener.onEvent(GattStatus.SERVER_WRITE,value)
+        pushLog("hello")
+        //需要setResponse，不然客户端会一直等待
         bluetoothGattServer?.sendResponse(device,requestId,
-            BluetoothGatt.GATT_SUCCESS,offset,"服务端: 已收到你的消息".toByteArray())
+            BluetoothGatt.GATT_SUCCESS,offset,"2".toByteArray())
+        value?.let {
+            packetData(value)
+        }
     }
 
 

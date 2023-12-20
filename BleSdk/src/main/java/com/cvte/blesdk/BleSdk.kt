@@ -2,7 +2,7 @@ package com.cvte.blesdk
 
 import android.annotation.SuppressLint
 import android.content.Context
-import com.cvte.blesdk.sender.BleClient
+import com.cvte.blesdk.client.BleClient
 import com.cvte.blesdk.server.BleServer
 
 /**

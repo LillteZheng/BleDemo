@@ -19,8 +19,8 @@ import com.cvte.blesdk.BleError
 import com.cvte.blesdk.BleSdk
 import com.cvte.blesdk.ClientStatus
 import com.cvte.blesdk.ScanBeacon
-import com.cvte.blesdk.sender.BleClientOption
-import com.cvte.blesdk.sender.IClientBle
+import com.cvte.blesdk.client.BleClientOption
+import com.cvte.blesdk.client.IClientBle
 import com.zhengsr.bledemo.databinding.ActivityClientBinding
 
 class ClientActivity : AppCompatActivity(), OnItemClickListener {
@@ -96,14 +96,14 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
         mData.clear()
         mBleAdapter?.notifyDataSetChanged()
         val option = BleClientOption.Builder()
-            .fliterName("Vieunite")
+          //  .fliterName("Vieunite")
             .logListener(object : BleClientOption.ILogListener {
                 override fun onLog(log: String) {
                     Log.d(TAG, log)
                 }
 
             }).build()
-        BleSdk.getClient().startScan(option,object : IClientBle.IBleClientListener {
+        BleSdk.getClient().startScan(option,object : IClientBle.IBleEventListener {
 
 
 
@@ -121,6 +121,9 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
                     }
                     ClientStatus.SERVER_DISCONNECTED->{
                         appInfo("服务端断开连接：${obj as String}")
+                    }
+                    ClientStatus.SERVER_WRITE->{
+                        appInfo("服务端写入数据：$obj")
                     }
 
                     else -> {}

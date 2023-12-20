@@ -1,4 +1,4 @@
-package com.cvte.blesdk.sender
+package com.cvte.blesdk.client
 
 import com.cvte.blesdk.UUID_READ_NOTIFY
 import com.cvte.blesdk.UUID_SERVICE
