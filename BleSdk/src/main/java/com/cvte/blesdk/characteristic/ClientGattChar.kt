@@ -19,10 +19,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
  */
 class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "client") {
     private var blueGatt: BluetoothGatt? = null
-    private var name: String? = null
-    fun connectGatt(dev: BluetoothDevice, name: String?, autoConnect: Boolean) {
-        pushLog("connectGatt: ${dev.name}")
-        this.name = name
+    fun connectGatt(dev: BluetoothDevice, autoConnect: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             dev.connectGatt(
                 BleSdk.context!!,
@@ -86,11 +83,7 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         }
         pushLog("connect to gatt Service,now you can communicate with it")
         //先发送蓝牙名字
-        // send(name.toByteArray())
-        name?.let {
-            //send(it.toByteArray())
-            listener.onEvent(GattStatus.BLUE_NAME, it)
-        }
+        listener.onEvent(GattStatus.BLUE_NAME, null)
     }
 
     private val queue = ConcurrentLinkedQueue<ByteArray>()

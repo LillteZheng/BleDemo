@@ -107,26 +107,30 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
 
 
 
-            override fun onEvent(status: ClientStatus, obj: Any?) {
+            override fun onEvent(status: ClientStatus, obj: String?) {
                 when(status){
                     ClientStatus.SCAN_RESULT->{
                         val beacon = obj as ScanBeacon
-                        if (mData.size == 0 || mData.none { beacon.name == it.name }) {
-                            mData.add(beacon)
-                            mBleAdapter?.notifyItemInserted(mData.size - 1)
-                        }
+
                     }
                     ClientStatus.SERVER_CONNECTED->{
-                        appInfo("连接上服务端：${obj as String}")
+                        appInfo("连接上服务端：$obj")
                     }
                     ClientStatus.SERVER_DISCONNECTED->{
-                        appInfo("服务端断开连接：${obj as String}")
+                        appInfo("服务端断开连接：$obj")
                     }
                     ClientStatus.SERVER_WRITE->{
                         appInfo("服务端写入数据：$obj")
                     }
 
                     else -> {}
+                }
+            }
+
+            override fun onScanResult(beacon: ScanBeacon) {
+                if (mData.size == 0 || mData.none { beacon.name == it.name }) {
+                    mData.add(beacon)
+                    mBleAdapter?.notifyItemInserted(mData.size - 1)
                 }
             }
 

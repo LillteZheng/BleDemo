@@ -13,6 +13,6 @@ interface IServerBle :IBle{
     fun closeServer()
 
     interface IBleEventListener:IBle.IListener {
-        fun onEvent(status: ServerStatus, obj: Any?)
+        fun onEvent(status: ServerStatus, obj: String?)
     }
 }

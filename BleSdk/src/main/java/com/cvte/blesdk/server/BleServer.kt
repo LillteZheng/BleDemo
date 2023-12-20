@@ -115,7 +115,7 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
         if (gattServer == null) {
             gattServer = ServerGattChar(object : AbsCharacteristic.IGattListener {
 
-                override fun onEvent(status: GattStatus, obj: Any?) {
+                override fun onEvent(status: GattStatus, obj: String?) {
                     pushLog("server status change:$status")
                     when (status) {
                         GattStatus.CLIENT_READ -> {
@@ -131,15 +131,6 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
                         }
 
                         GattStatus.SERVER_CONNECTED->{
-                            /*obj?.let {
-                                val mac = obj as String
-                                bluetoothAdapter?.getRemoteDevice(mac)?.let {
-                                    iBleListener?.onEvent(ServerStatus.CLIENT_CONNECTED,it)
-                                }
-                            }
-                            pushLog("client ($obj) connected")
-                            iBleListener?.onEvent(ServerStatus.CLIENT_CONNECTED,obj)*/
-                            //为了拿到日志，需要等发送端发过来，等待1秒
                             handler?.removeMessages(MSG_WAIT_NAME)
                             Message.obtain().apply {
                                 what = MSG_WAIT_NAME

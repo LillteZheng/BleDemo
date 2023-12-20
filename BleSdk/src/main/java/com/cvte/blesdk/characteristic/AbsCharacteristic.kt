@@ -22,7 +22,7 @@ abstract class AbsCharacteristic(val listener: IGattListener, tag: String) {
     protected var isConnect = false
 
     open interface IGattListener {
-        fun onEvent(status: GattStatus, obj: Any?)
+        fun onEvent(status: GattStatus, obj: String?)
     }
 
     open fun isConnected() = isConnect

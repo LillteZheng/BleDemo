@@ -58,7 +58,7 @@ class BleClient(context: Context?) : AbsBle(context),IClientBle {
       //  dev.connectGatt(BleSdk.context!!,autoConnect,)
         if (gattChar == null) {
             gattChar = ClientGattChar(object : AbsCharacteristic.IGattListener {
-                override fun onEvent(status: GattStatus, obj: Any?) {
+                override fun onEvent(status: GattStatus, obj: String?) {
                   //  pushLog("status: $status,obj:$obj")
                     if (status == GattStatus.CLIENT_DISCONNECTED){
                         release()
@@ -75,7 +75,7 @@ class BleClient(context: Context?) : AbsBle(context),IClientBle {
                             listener?.onEvent(ClientStatus.SERVER_WRITE,obj)
                         }
                         GattStatus.BLUE_NAME->{
-                            val name = obj as String
+                            val name = bluetoothAdapter?.name?:"null"
                             subSend(name.toByteArray(),NAME_TYPE)
 
                         }
@@ -88,7 +88,7 @@ class BleClient(context: Context?) : AbsBle(context),IClientBle {
             })
         }
         pushLog("connect to ${dev.name}")
-        gattChar?.connectGatt(dev,bluetoothAdapter?.name,false)
+        gattChar?.connectGatt(dev,false)
     }
 
     override fun send(data:ByteArray){
@@ -134,7 +134,7 @@ class BleClient(context: Context?) : AbsBle(context),IClientBle {
                 }
             }
             scanSuccess = true
-            listener?.onEvent(ClientStatus.SCAN_RESULT,ScanBeacon(result.device.name, result.rssi,result.device,result.scanRecord))
+            listener?.onScanResult(ScanBeacon(result.device.name, result.rssi,result.device,result.scanRecord))
         }
 
 

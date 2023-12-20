@@ -58,7 +58,7 @@ class ServerActivity : AppCompatActivity() {
             }).build()
 
         BleSdk.getServer().startServer(option, object : IServerBle.IBleEventListener {
-            override fun onEvent(serverStatus: ServerStatus, obj: Any?) {
+            override fun onEvent(serverStatus: ServerStatus, obj: String?) {
                 when(serverStatus){
                     ServerStatus.ADVERTISE_SUCCESS -> {
                         appInfo("开启广播成功，请搜索设备：$obj")
@@ -77,6 +77,7 @@ class ServerActivity : AppCompatActivity() {
                     }
                 }
             }
+
 
             override fun onFail(error: BleError, errorMsg: String) {
                 appInfo("失败: error = $error, errorMsg = $errorMsg")
