@@ -86,6 +86,7 @@ abstract class AbsBle(val context: Context?) {
    protected fun subSend(data: ByteArray,type:Byte){
         val datas = BleUtil.subpackage(data, MAX_DATA_SIZE)
         datas.forEach { index, bytes ->
+            //格式+数据
             if (index == 0){
                 //第一个包，包含所有的标志位
                 //两个字节，表示数据长度
@@ -93,6 +94,7 @@ abstract class AbsBle(val context: Context?) {
                 val lowByte = (data.size and 0xFF).toByte()
                 sendData(byteArrayOf(DATA_FLAG,type,highByte,lowByte).plus(bytes))
             }else{
+                //数据包
                 sendData(bytes)
             }
 
