@@ -17,6 +17,7 @@ object DataSpilt {
     @Synchronized
     fun subData(mtu:Int, data: ByteArray, type: Byte, listener: ISplitListener) {
         if (isSplit.get()) {
+            //每一个包之间写入数据需要设置间隔，比如100ms。
             isSplit.set(false)
             val datas = BleUtil.subpackage(data, mtu)
             buffer = ByteBuffer.allocate(data.size)
@@ -38,6 +39,7 @@ object DataSpilt {
                     // sendData(bytes)
                     listener.onResult(bytes)
                 }
+                Thread.sleep(100)
                 Log.d(TAG, "zsr subData: 发送完毕")
 
             }

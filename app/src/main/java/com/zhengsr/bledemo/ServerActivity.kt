@@ -13,6 +13,7 @@ import com.zhengsr.bledemo.databinding.ActivityServerBinding
 import com.zhengsr.server.server.BleOption
 import com.zhengsr.server.BleServer
 import com.zhengsr.server.BleStatus
+import com.zhengsr.server.server.IBle
 
 class ServerActivity : AppCompatActivity() {
     companion object{
@@ -106,7 +107,17 @@ class ServerActivity : AppCompatActivity() {
     fun send(view: View) {
       //  Log.d(TAG, "zsr send: ${msg.length} ${msg.toByteArray().size}")
        // val msg = binding.editMsg.text.trim().toString()
-        BleServer.get().send(msg.toByteArray())
+        BleServer.get().send(msg2.toByteArray(), object : IBle.IWrite {
+            override fun onStart() {
+            }
+
+            override fun onSuccess() {
+            }
+
+            override fun onFail(errorMsg: String) {
+            }
+
+        })
     }
 
     private val msg = """

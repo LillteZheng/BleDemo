@@ -185,15 +185,16 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener, "ser
         var isSuccess = false
         if (isConnected()) {
             connectDevice?.let {
-                bluetoothGattServer?.getService(UUID_SERVICE)?.getCharacteristic(UUID_READ_NOTIFY)
-                    ?.apply {
-                        value = data
-                        isSuccess = bluetoothGattServer?.notifyCharacteristicChanged(
-                            connectDevice!!,
-                            this,
-                            false
-                        ) == true
-                    }
+                val char = bluetoothGattServer?.getService(UUID_SERVICE)?.getCharacteristic(UUID_READ_NOTIFY)?.apply {
+                    value = data
+                }
+                isSuccess = bluetoothGattServer?.notifyCharacteristicChanged(
+                    it,
+                    char,
+                    true
+                ) == true
+
+
             }
         }
         return isSuccess

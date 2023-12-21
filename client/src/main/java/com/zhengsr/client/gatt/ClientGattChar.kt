@@ -45,9 +45,11 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
     override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
         super.onConnectionStateChange(gatt, status, newState)
         pushLog("onClientStateChange() called with: gatt = $gatt, status = $status, newState = $newState")
+        //todo 133 问题，需要重新扫描再配对
         if (newState == BluetoothProfile.STATE_CONNECTED) {
             //todo 提前设置 mtu？
-            gatt?.discoverServices()
+            gatt?.requestMtu(500)
+
         } else {
             isConnect = false
             listener.onEvent(GattStatus.DISCONNECT_FROM_SERVER, gatt?.device?.name)
@@ -56,6 +58,17 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         }
     }
 
+    override fun onDescriptorWrite(
+        gatt: BluetoothGatt?,
+        descriptor: BluetoothGattDescriptor?,
+        status: Int
+    ) {
+        super.onDescriptorWrite(gatt, descriptor, status)
+        Log.d(
+            TAG,
+            "onDescriptorWrite() called with: gatt = $gatt, descriptor = $descriptor, status = $status"
+        )
+    }
 
     override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
         super.onServicesDiscovered(gatt, status)
@@ -69,8 +82,10 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
             gatt?.getService(UUID_SERVICE)?.getCharacteristic(UUID_READ_NOTIFY)?.let { char ->
                 val isSuccess = gatt.setCharacteristicNotification(char, true)
                 val descriptor = char.getDescriptor(UUID_READ_DESCRIBE)
-                descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
-                gatt.writeDescriptor(descriptor)
+                descriptor?.let {
+                    it.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                    gatt.writeDescriptor(it)
+                }
                 pushLog("setCharacteristicNotification: $isSuccess")
             }
 
@@ -85,6 +100,7 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
     override fun onMtuChanged(gatt: BluetoothGatt?, mtu: Int, status: Int) {
         super.onMtuChanged(gatt, mtu, status)
         pushLog("onMtuChanged() called with: gatt = $gatt, mtu = $mtu, status = $status")
+        gatt?.discoverServices()
         if (status == BluetoothGatt.GATT_SUCCESS) {
             listener.onEvent(GattStatus.MTU_CHANGE, mtu.toString())
         }

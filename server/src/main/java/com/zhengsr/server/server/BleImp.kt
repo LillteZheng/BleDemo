@@ -8,6 +8,7 @@ import android.os.Message
 import android.util.Log
 import com.zhengsr.common.DATA_TYPE
 import com.zhengsr.common.DataSpilt
+import com.zhengsr.common.FORMAT_LEN
 import com.zhengsr.server.BleError
 import com.zhengsr.server.BleStatus
 import com.zhengsr.server.GattStatus
@@ -41,7 +42,7 @@ internal class BleImp : AbsBle(), IBle {
         if (!checkPermission(option?.context,listener)) {
             return
         }
-        if (isGattConnected()) {
+        if (isConnected()) {
             listener.onFail(
                 BleError.ADVERTISE_FAILED,
                 "gatt is connected,please disconnect first"
@@ -97,10 +98,9 @@ internal class BleImp : AbsBle(), IBle {
     }
 
 
-    private fun isGattConnected(): Boolean {
-        return gattServer?.isConnected() ?: false
-    }
 
+
+    override fun isConnected() =  gattServer?.isConnected() ?: false
 
     override fun closeServer() {
         pushLog("close server if need: bleAdvServer:$bleAdvServer, gattServer:$gattServer")
@@ -157,7 +157,8 @@ internal class BleImp : AbsBle(), IBle {
                             }
                         }
                         GattStatus.MTU_CHANGE ->{
-                            mtu = obj?.toInt() ?: 15
+                            mtu = obj?.toInt()  ?: 19
+                            mtu -= (3+ FORMAT_LEN)
                         }
 
 
@@ -213,19 +214,38 @@ internal class BleImp : AbsBle(), IBle {
     }
 
 
-    override fun send(data: ByteArray) {
+
+    private var isCanSend = false
+    override fun send(data: ByteArray,iWrite: IBle.IWrite) {
+        /**
+         * 1. 判断是否连接
+         * 2. 分包发送
+         * 3. 等待回复 - 完成
+         */
+        /*if (isConnected()){
+            DataSpilt.subData(mtu,data, DATA_TYPE, object : DataSpilt.ISplitListener {
+                override fun onResult(data: ByteArray) {
+                    val isS = gattServer?.send(data)
+                    pushLog("send data:${data.size} $isS")
+                }
+
+            })
+        }*/
         sendData(DATA_TYPE, data)
     }
 
     private fun sendData(type: Byte, data: ByteArray) {
         Log.d(TAG, "zsr sendData: $mtu")
-        DataSpilt.subData(mtu,data, type, object : DataSpilt.ISplitListener {
-            override fun onResult(data: ByteArray) {
-                val isS = gattServer?.send(data)
-                pushLog("send data:${data.size} $isS")
-            }
+        handler?.post {
 
-        })
+            DataSpilt.subData(mtu,data, type, object : DataSpilt.ISplitListener {
+                override fun onResult(data: ByteArray) {
+                    val isS = gattServer?.send(data)
+                    pushLog("send data:${data.size} $isS")
+                }
+
+            })
+        }
     }
 
 
