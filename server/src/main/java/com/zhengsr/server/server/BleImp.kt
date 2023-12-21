@@ -25,6 +25,8 @@ import java.util.LinkedList
 internal class BleImp : AbsBle(), IBle {
     companion object {
         private const val TAG = "BleServer"
+        private const val DEFAULT_MTU = 19
+        private const val DEFAULT_DATA_HEAD = 3
         private const val MAX_NAME_SIZE = 20
         private const val MSG_WAIT_NAME = 0x01
         private const val MSG_RESTART_AD = 0x02
@@ -38,7 +40,7 @@ internal class BleImp : AbsBle(), IBle {
     private var bleAdvServer: BleAdvServer? = null
 
     private var clientName = "null"
-    private var mtu = 15
+    private var mtu = DEFAULT_MTU - FORMAT_LEN
     private var option: BleOption.Builder? = null
     override fun startServer(builder: BleOption, listener: IBle.IListener) {
         this.option = builder.builder
@@ -192,8 +194,8 @@ internal class BleImp : AbsBle(), IBle {
                             }
                         }
                         GattStatus.MTU_CHANGE ->{
-                            mtu = obj?.toInt()  ?: 19
-                            mtu -= (3+ FORMAT_LEN)
+                            mtu = obj?.toInt()  ?: DEFAULT_MTU
+                            mtu -= (DEFAULT_DATA_HEAD+ FORMAT_LEN)
                         }
 
 

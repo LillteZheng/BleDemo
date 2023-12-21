@@ -18,6 +18,7 @@ import com.zhengsr.client.gatt.ClientGattChar
 import com.zhengsr.common.BleUtil
 import com.zhengsr.common.DATA_TYPE
 import com.zhengsr.common.DataSpilt
+import com.zhengsr.common.FORMAT_LEN
 import com.zhengsr.common.NAME_TYPE
 import java.util.LinkedList
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -30,17 +31,18 @@ import java.util.concurrent.atomic.AtomicBoolean
 class BleImpl() : AbsBle(), IBle {
     companion object{
         private const val TAG = "BleImpl"
+        private const val DEFAULT_MTU = 19
+        //ble 发送数据时，前三个字段是固定的，所以这里是3
+        private const val DEFAULT_DATA_HEAD = 3
         private const val MSG_SEND_DATA = 1;
         private const val MSG_RESPONSE_TIMEOUT = 2;
-        //ble 发送数据时，前三个字段是固定的，所以这里是3
-        private const val BLE_DATA_HEAD = 3
     }
     private var listener: IBle.IListener? = null
     private val isScanning = AtomicBoolean(false)
     private var gattChar: ClientGattChar? = null
     private var option: BleOption.Builder? = null
     private var scanSuccess = false
-    private var mtu = 15
+    private var mtu = DEFAULT_MTU - FORMAT_LEN
 
     override fun startScan(builder: BleOption, listener: IBle.IListener) {
         scanSuccess = false
@@ -104,7 +106,8 @@ class BleImpl() : AbsBle(), IBle {
                             sendData(name.toByteArray(), NAME_TYPE)
                         }
                         GattStatus.MTU_CHANGE ->{
-                            mtu = obj?.toInt()?:15
+                            mtu = obj?.toInt()?:DEFAULT_MTU
+                            mtu -= (DEFAULT_DATA_HEAD+ FORMAT_LEN)
                         }
                         GattStatus.WRITE_RESPONSE->{
                             pushLog("write response,cache data size: ${dataQueue.size}")

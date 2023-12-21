@@ -46,8 +46,8 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         //todo 133 问题，需要重新扫描再配对
         if (newState == BluetoothProfile.STATE_CONNECTED) {
             //todo 提前设置 mtu？
-            //  gatt?.requestMtu(500)
-            gatt?.discoverServices()
+            gatt?.requestMtu(500)
+           // gatt?.discoverServices()
 
         } else {
             isConnect = false
