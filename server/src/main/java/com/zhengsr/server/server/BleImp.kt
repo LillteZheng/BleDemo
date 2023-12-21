@@ -8,12 +8,14 @@ import android.os.Message
 import android.util.Log
 import com.zhengsr.common.DATA_TYPE
 import com.zhengsr.common.DataSpilt
+import com.zhengsr.common.DataSpilt.subData
 import com.zhengsr.common.FORMAT_LEN
 import com.zhengsr.server.BleError
 import com.zhengsr.server.BleStatus
 import com.zhengsr.server.GattStatus
 import com.zhengsr.server.gatt.AbsCharacteristic
 import com.zhengsr.server.gatt.ServerGattChar
+import java.util.LinkedList
 
 
 /**
@@ -26,6 +28,8 @@ internal class BleImp : AbsBle(), IBle {
         private const val MAX_NAME_SIZE = 20
         private const val MSG_WAIT_NAME = 0x01
         private const val MSG_RESTART_AD = 0x02
+        private const val MSG_SEND_DATA = 0x03
+        private const val MSG_RESPONSE_TIMEOUT = 0x04
         private const val TIME_OUT = 1000L
     }
 
@@ -79,6 +83,37 @@ internal class BleImp : AbsBle(), IBle {
                     bleAdvServer = BleAdvServer(bluetoothAdapter!!)
                 }
                 bleAdvServer?.startBroadcast(advertiseCallback)
+            }
+            MSG_SEND_DATA->{
+                dataQueue.poll()?.let {
+                    val ret = gattServer?.send(it)
+                    pushLog("send success: $ret")
+                    if (ret == false) {
+                        //todo 如果失败了，重发3次，如果还是失败，就不发了
+                        //1. 把值重新填回去 dataQueue
+                        //2. 重新发送MSG_SEND_DATA消息，
+                        //3. 计算count，如果大于3，则表示失败了
+
+                        writeFailCount++
+                        if (writeFailCount > 3){
+                            writeListener?.onFail( "send failed")
+                            dataQueue.clear()
+
+                        }else{
+                            dataQueue.addFirst(it)
+                            handler?.sendEmptyMessageDelayed(MSG_SEND_DATA,200)
+                        }
+
+                        //  writeListener?.onFail(DataError.SEND_FAILED, "send failed")
+                    } else {
+                        pushLog("cache data size: ${dataQueue.size}")
+                        if (dataQueue.isEmpty()){
+                            writeListener?.onSuccess()
+                            return
+                        }
+                        handler?.sendEmptyMessageDelayed(MSG_SEND_DATA, waitResponseTime)
+                    }
+                }
             }
         }
 
@@ -214,24 +249,33 @@ internal class BleImp : AbsBle(), IBle {
     }
 
 
-
-    private var isCanSend = false
+    private var writeListener:IBle.IWrite? = null
+    private val dataQueue = LinkedList<ByteArray>()
+    private var writeFailCount = 0
     override fun send(data: ByteArray,iWrite: IBle.IWrite) {
+        writeListener = iWrite
         /**
          * 1. 判断是否连接
          * 2. 分包发送
          * 3. 等待回复 - 完成
          */
-        /*if (isConnected()){
-            DataSpilt.subData(mtu,data, DATA_TYPE, object : DataSpilt.ISplitListener {
-                override fun onResult(data: ByteArray) {
-                    val isS = gattServer?.send(data)
-                    pushLog("send data:${data.size} $isS")
-                }
+        if (!isConnected()){
+            pushLog("send data fail,client not connected")
+            return
+        }
+        if (dataQueue.isNotEmpty()){
+            pushLog("data sending,please wait..")
+            return
+        }
 
-            })
-        }*/
-        sendData(DATA_TYPE, data)
+
+        dataQueue.clear()
+        subData(data, DATA_TYPE,mtu,dataQueue)
+        pushLog("send data size: ${dataQueue.size}")
+        handler?.removeMessages(MSG_SEND_DATA)
+        handler?.sendEmptyMessage(MSG_SEND_DATA)
+
+        //sendData(DATA_TYPE, data)
     }
 
     private fun sendData(type: Byte, data: ByteArray) {

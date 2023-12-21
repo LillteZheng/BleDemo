@@ -192,7 +192,7 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener, "ser
                 isSuccess = bluetoothGattServer?.notifyCharacteristicChanged(
                     it,
                     char,
-                    true
+                    false
                 ) == true
 
 

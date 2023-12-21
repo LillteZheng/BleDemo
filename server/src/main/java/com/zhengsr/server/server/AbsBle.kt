@@ -8,16 +8,24 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.os.Message
+import androidx.core.util.forEach
+import androidx.core.util.size
 
 import com.zhengsr.common.BleUtil
+import com.zhengsr.common.DATA_FLAG
 import com.zhengsr.server.BleError
+import java.util.LinkedList
 
 /**
  * @author by zhengshaorui 2023/12/13
  * describe：
  */
 abstract class AbsBle{
-
+    companion object {
+        private const val WAIT_TIME = 110L
+    }
+    //默认100
+    protected var waitResponseTime = WAIT_TIME
 
 
     private var handlerThread: HandlerThread? = null
@@ -77,7 +85,26 @@ abstract class AbsBle{
     }
 
 
-
+    fun subData(data: ByteArray, type: Byte, mtu: Int,queue: LinkedList<ByteArray>) {
+        val datas = BleUtil.subpackage(data, mtu)
+        datas.forEach { index, bytes ->
+            //格式+数据
+            if (index == 0) {
+                //第一个包，包含所有的标志位
+                //两个字节，表示数据长度
+                val highByte = (data.size shr 8).toByte()
+                val lowByte = (data.size and 0xFF).toByte()
+                val byte = byteArrayOf(DATA_FLAG, type, highByte, lowByte).plus(bytes)
+                // listener.onResult(byte)
+                queue.add(byte)
+            } else {
+                //数据包
+                // sendData(bytes)
+                // listener.onResult(bytes)
+                queue.add(bytes)
+            }
+        }
+    }
 
     fun releaseHandle(){
         handlerThread?.quitSafely()
