@@ -7,7 +7,6 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.Build
 import android.os.Message
-import android.util.Log
 import com.zhengsr.client.BleError
 import com.zhengsr.client.BleStatus
 import com.zhengsr.client.DataError
@@ -21,7 +20,6 @@ import com.zhengsr.common.DataSpilt
 import com.zhengsr.common.FORMAT_LEN
 import com.zhengsr.common.NAME_TYPE
 import java.util.LinkedList
-import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -101,9 +99,9 @@ class BleImpl() : AbsBle(), IBle {
                         GattStatus.NORMAL_DATA ->{
                             listener?.onEvent(BleStatus.SERVER_WRITE,obj)
                         }
-                        GattStatus.BLUE_NAME ->{
+                        GattStatus.SEND_BLUE_NAME ->{
                             val name = bluetoothAdapter?.name?:"null"
-                            sendData(name.toByteArray(), NAME_TYPE)
+                            sendData(name.toByteArray(), NAME_TYPE,null)
                         }
                         GattStatus.MTU_CHANGE ->{
                             mtu = obj?.toInt()?:DEFAULT_MTU
@@ -135,23 +133,7 @@ class BleImpl() : AbsBle(), IBle {
     private val dataQueue = LinkedList<ByteArray>()
     private var writeFailCount = 0
     override fun send(data:ByteArray,listener: IBle.IWrite){
-        writeListener = listener
-        writeFailCount = 0
-        if (!isConnected()){
-            pushLog("please connect to server first")
-            return
-        }
-        if (dataQueue.isNotEmpty()){
-            pushLog("data sending,please wait..")
-            return
-        }
-
-
-        dataQueue.clear()
-        subData(data, DATA_TYPE,mtu,dataQueue)
-        pushLog("send data size: ${dataQueue.size}")
-        handler?.removeMessages(MSG_SEND_DATA)
-        handler?.sendEmptyMessage(MSG_SEND_DATA)
+       sendData(data, DATA_TYPE,listener)
     }
 
     override fun handleMessage(msg: Message) {
@@ -191,16 +173,24 @@ class BleImpl() : AbsBle(), IBle {
         }
     }
 
-     fun sendData(data: ByteArray,type:Byte) {
-         handler?.post {
-             DataSpilt.subData(mtu,data,type,object:DataSpilt.ISplitListener{
-                 override fun onResult(data: ByteArray) {
-                     val isSuccess = gattChar?.send(data)
-                     pushLog("send success: $isSuccess")
-                 }
-
-             })
+     fun sendData(data: ByteArray,type:Byte,listener: IBle.IWrite?) {
+         writeListener = listener
+         writeFailCount = 0
+         if (!isConnected()){
+             pushLog("please connect to server first")
+             return
          }
+         if (dataQueue.isNotEmpty()){
+             pushLog("data sending,please wait..")
+             return
+         }
+
+
+         dataQueue.clear()
+         subData(data, type,mtu,dataQueue)
+         pushLog("send data size: ${dataQueue.size}")
+         handler?.removeMessages(MSG_SEND_DATA)
+         handler?.sendEmptyMessage(MSG_SEND_DATA)
     }
 
 

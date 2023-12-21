@@ -86,6 +86,7 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
             }
 
             listener.onEvent(GattStatus.CONNECT_TO_SERVER, gatt?.device?.name)
+            listener.onEvent(GattStatus.SEND_BLUE_NAME,"")
         } else {
             listener.onEvent(GattStatus.DISCONNECT_FROM_SERVER, gatt?.device?.name)
             gatt?.close()
@@ -115,7 +116,7 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
             override fun onResult(type: Byte, data: ByteArray) {
                 val status = when (type) {
                     //MTU_TYPE-> GattStatus.MTU_CHANGE
-                    NAME_TYPE -> GattStatus.BLUE_NAME
+                    NAME_TYPE -> GattStatus.SEND_BLUE_NAME
                     else -> GattStatus.NORMAL_DATA
                 }
                 listener.onEvent(status, String(data))

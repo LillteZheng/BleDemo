@@ -32,7 +32,7 @@ enum class GattStatus{
     CONNECT_TO_SERVER,
     DISCONNECT_FROM_SERVER,
     NORMAL_DATA,
-    BLUE_NAME,
+    SEND_BLUE_NAME,
     MTU_CHANGE,
     WRITE_RESPONSE,
     LOG
