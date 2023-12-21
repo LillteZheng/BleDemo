@@ -111,6 +111,7 @@ class BleImpl() : AbsBle(), IBle {
 
     override fun send(data:ByteArray){
        // gattChar?.send(data)
+
         sendData(data, DATA_TYPE)
     }
 
@@ -179,10 +180,10 @@ class BleImpl() : AbsBle(), IBle {
             }
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (!BleUtil.isPermission(context, Manifest.permission.BLUETOOTH_CONNECT)) {
+            /*if (!BleUtil.isPermission(context, Manifest.permission.BLUETOOTH_CONNECT)) {
                 listener.onFail(BleError.PERMISSION_DENIED, "BLUETOOTH_CONNECT permission denied")
                return  false
-            }
+            }*/
             if (!BleUtil.isPermission(context, Manifest.permission.BLUETOOTH_SCAN)) {
                 listener.onFail(BleError.PERMISSION_DENIED, "BLUETOOTH_SCAN permission denied")
                 return  false

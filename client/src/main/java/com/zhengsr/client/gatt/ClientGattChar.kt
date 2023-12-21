@@ -48,7 +48,8 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         //todo 133 问题，需要重新扫描再配对
         if (newState == BluetoothProfile.STATE_CONNECTED) {
             //todo 提前设置 mtu？
-            gatt?.requestMtu(500)
+          //  gatt?.requestMtu(500)
+            gatt?.discoverServices()
 
         } else {
             isConnect = false
@@ -74,9 +75,6 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         super.onServicesDiscovered(gatt, status)
         isConnect = true
         blueGatt = gatt
-
-
-
         if (status == BluetoothGatt.GATT_SUCCESS) {
             //支持通知属性，当设置为true,onCharacteristicChanged 会回调
             gatt?.getService(UUID_SERVICE)?.getCharacteristic(UUID_READ_NOTIFY)?.let { char ->

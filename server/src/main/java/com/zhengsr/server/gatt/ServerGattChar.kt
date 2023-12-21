@@ -37,12 +37,12 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener, "ser
             BluetoothGattCharacteristic.PERMISSION_READ
         )
 
-        val readDescriptor = BluetoothGattDescriptor(
+      /*  val readDescriptor = BluetoothGattDescriptor(
              UUID_READ_DESCRIBE,
              BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE
         )
 
-        readNotifyChar.addDescriptor(readDescriptor)
+        readNotifyChar.addDescriptor(readDescriptor)*/
 
 
         val writeChar = BluetoothGattCharacteristic(
@@ -54,7 +54,7 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener, "ser
             UUID_WRITE_DESCRIBE,
             BluetoothGattDescriptor.PERMISSION_WRITE or BluetoothGattDescriptor.PERMISSION_READ
         )
-        writeChar.addDescriptor(writeDescriptor)
+       // writeChar.addDescriptor(writeDescriptor)
         pushLog("config characteristic ,write ,read nad notify")
 
 
@@ -144,6 +144,7 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener, "ser
                         else -> GattStatus.WRITE_RESPONSE
                     }
                     listener.onEvent(status, String(data))
+
                 }
 
             })

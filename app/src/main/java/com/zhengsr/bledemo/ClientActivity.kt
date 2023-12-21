@@ -105,9 +105,6 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
 
             }).build()
         BleClient.get().startScan(option,object : IBle.IListener {
-
-
-
             override fun onEvent(status: BleStatus, obj: String?) {
                 when(status){
 
@@ -143,8 +140,8 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
     }
 
     fun writeData(view: View) {
-      //  val msg = binding.edit.text.toString().trim()
-        BleClient.get().send(msg2.toByteArray())
+        val msg = binding.edit.text.toString().trim()
+        BleClient.get().send(msg.toByteArray())
     }
 
     fun appInfo(msg:String){
