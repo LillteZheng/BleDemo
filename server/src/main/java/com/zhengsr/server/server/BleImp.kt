@@ -5,11 +5,10 @@ import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
 import android.os.Message
+import android.util.Log
 import com.zhengsr.common.DATA_TYPE
 import com.zhengsr.common.DataSpilt
-import com.zhengsr.server.BleAdvServer
 import com.zhengsr.server.BleError
-import com.zhengsr.server.BleOption
 import com.zhengsr.server.BleStatus
 import com.zhengsr.server.GattStatus
 import com.zhengsr.server.gatt.AbsCharacteristic
@@ -20,7 +19,7 @@ import com.zhengsr.server.gatt.ServerGattChar
  * @author by zhengshaorui 2023/12/12
  * describe：蓝牙服务端，主要负责发送广播，开启蓝牙服务
  */
-internal class BleConsumer : AbsBle(), IBle {
+internal class BleImp : AbsBle(), IBle {
     companion object {
         private const val TAG = "BleServer"
         private const val MAX_NAME_SIZE = 20
@@ -219,10 +218,11 @@ internal class BleConsumer : AbsBle(), IBle {
     }
 
     private fun sendData(type: Byte, data: ByteArray) {
-
+        Log.d(TAG, "zsr sendData: $mtu")
         DataSpilt.subData(mtu,data, type, object : DataSpilt.ISplitListener {
             override fun onResult(data: ByteArray) {
-                gattServer?.send(data)
+                val isS = gattServer?.send(data)
+                pushLog("send data:${data.size} $isS")
             }
 
         })

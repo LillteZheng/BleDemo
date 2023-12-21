@@ -1,4 +1,4 @@
-package com.zhengsr.server
+package com.zhengsr.client
 
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.ScanRecord
@@ -12,25 +12,25 @@ enum class BleError {
     BLE_NOT_SUPPORT,
     BLUETOOTH_NOT_OPEN,
     PERMISSION_DENIED,
-    NAME_TOO_LONG,
-    ADVERTISE_FAILED,
+    GPS_NOT_OPEN,
 }
 
 enum class BleStatus{
-    ADVERTISE_SUCCESS,
-    CLIENT_CONNECTED,
-    CLIENT_DISCONNECT,
-    DATA
+    SERVER_CONNECTED,
+    SERVER_DISCONNECTED,
+    SCAN_FAILED,
+    SERVER_WRITE,
 }
 
 enum class GattStatus{
 
-    CLIENT_CONNECTED,
-    CLIENT_DISCONNECTED,
-    MTU_CHANGE,
+    //客户端
+    CONNECT_TO_SERVER,
+    DISCONNECT_FROM_SERVER,
     WRITE_RESPONSE,
-
     BLUE_NAME,
+    MTU_CHANGE,
     LOG
 }
 
+data class ScanBeacon(val name:String?, val rssi:Int, val device: BluetoothDevice?, val record: ScanRecord?)

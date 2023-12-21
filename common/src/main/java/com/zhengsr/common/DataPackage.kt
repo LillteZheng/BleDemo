@@ -48,6 +48,7 @@ class DataPackage(val formatLen :Int) {
             buffer = ByteBuffer.allocate(len)
             buffer?.apply{
                 put(value, formatLen, value.size - formatLen)
+                Log.d(TAG, "zsr packageData: 第一个 $count,:${value.size} ,${position()} ,${limit()}")
                 if (position() >= limit()) {
                     listener.onResult(type, array())
                     buffer = null
@@ -57,8 +58,8 @@ class DataPackage(val formatLen :Int) {
 
         } else {
             count++
-            Log.d(TAG, "zsr packageData: 后续包 :$count")
             buffer?.apply {
+                Log.d(TAG, "zsr packageData: 后续包 $count,:${value.size} ,${position()} ,${limit()}")
                 put(value)
                 if (position() >= limit()) {
                     listener.onResult(type, array())

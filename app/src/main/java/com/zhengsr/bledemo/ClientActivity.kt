@@ -15,13 +15,13 @@ import androidx.recyclerview.widget.RecyclerView
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.listener.OnItemClickListener
 import com.chad.library.adapter.base.viewholder.BaseViewHolder
-import com.cvte.blesdk.BleError
-import com.cvte.blesdk.BleSdk
-import com.cvte.blesdk.ClientStatus
-import com.cvte.blesdk.ScanBeacon
-import com.cvte.blesdk.client.BleClientOption
-import com.cvte.blesdk.client.IClientBle
 import com.zhengsr.bledemo.databinding.ActivityClientBinding
+import com.zhengsr.client.BleClient
+import com.zhengsr.client.BleError
+import com.zhengsr.client.BleStatus
+import com.zhengsr.client.ScanBeacon
+import com.zhengsr.client.client.BleOption
+import com.zhengsr.client.client.IBle
 
 class ClientActivity : AppCompatActivity(), OnItemClickListener {
     companion object{
@@ -77,11 +77,11 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
     override fun onItemClick(adapter: BaseQuickAdapter<*, *>, view: View, position: Int) {
         //连接之前先关闭连接
       //  closeConnect()
-        BleSdk.getClient().release()
+      
         val bleData = mData[position]
         bleData.device?.let {
             appInfo("开始连接 ${it.name} ...")
-            BleSdk.getClient().connect(it)
+            BleClient.get().connect(it)
 
         }
       //  blueGatt = bleData.dev.connectGatt(this, false, blueGattListener)
@@ -95,29 +95,33 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
         appInfo("开始扫描...")
         mData.clear()
         mBleAdapter?.notifyDataSetChanged()
-        val option = BleClientOption.Builder()
-          //  .fliterName("Vieunite")
-            .logListener(object : BleClientOption.ILogListener {
+        val option = BleOption.Builder()
+            .context(this)
+            .scanTime(6000L)
+            .logListener(object : BleOption.ILogListener {
                 override fun onLog(log: String) {
                     Log.d(TAG, log)
                 }
 
             }).build()
-        BleSdk.getClient().startScan(option,object : IClientBle.IBleEventListener {
+        BleClient.get().startScan(option,object : IBle.IListener {
 
 
 
-            override fun onEvent(status: ClientStatus, obj: String?) {
+            override fun onEvent(status: BleStatus, obj: String?) {
                 when(status){
 
-                    ClientStatus.SERVER_CONNECTED->{
+                    BleStatus.SERVER_CONNECTED->{
                         appInfo("连接上服务端：$obj")
                     }
-                    ClientStatus.SERVER_DISCONNECTED->{
+                    BleStatus.SERVER_DISCONNECTED->{
                         appInfo("服务端断开连接：$obj")
                     }
-                    ClientStatus.SERVER_WRITE->{
+                    BleStatus.SERVER_WRITE->{
                         appInfo("服务端写入数据：$obj")
+                    }
+                    BleStatus.SCAN_FAILED->{
+                        appInfo("扫描失败：请重新烧苗 ")
                     }
 
                     else -> {}
@@ -139,8 +143,8 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
     }
 
     fun writeData(view: View) {
-     //   val msg = binding.edit.text.toString().trim()
-        BleSdk.getClient().send(msg2.toByteArray())
+      //  val msg = binding.edit.text.toString().trim()
+        BleClient.get().send(msg2.toByteArray())
     }
 
     fun appInfo(msg:String){
@@ -155,12 +159,12 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
 
     override fun onDestroy() {
         super.onDestroy()
-        BleSdk.getClient().release()
+        BleClient.get().release()
     }
 
     fun disconnect(view: View) {
         appInfo("断开连接")
-        BleSdk.getClient().disconnect()
+        BleClient.get().disconnect()
     }
 
     private val msg2 = """

@@ -1,4 +1,4 @@
-package com.zhengsr.server
+package com.zhengsr.server.server
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.le.AdvertiseCallback

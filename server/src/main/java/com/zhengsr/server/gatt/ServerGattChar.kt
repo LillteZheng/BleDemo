@@ -3,6 +3,7 @@ package com.zhengsr.server.gatt
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattServer
 import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
@@ -11,10 +12,14 @@ import android.util.Log
 import com.zhengsr.common.DataPackage
 import com.zhengsr.common.FORMAT_LEN
 import com.zhengsr.common.NAME_TYPE
+import com.zhengsr.common.UUID_READ_DESCRIBE
 import com.zhengsr.common.UUID_READ_NOTIFY
 import com.zhengsr.common.UUID_SERVICE
-import com.zhengsr.server.BleOption
+import com.zhengsr.common.UUID_WRITE_DESCRIBE
+import com.zhengsr.server.server.BleOption
 import com.zhengsr.server.GattStatus
+import java.util.UUID
+
 
 /**
  * @author by zhengshaorui 2023/12/13
@@ -32,11 +37,24 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener, "ser
             BluetoothGattCharacteristic.PERMISSION_READ
         )
 
+        val readDescriptor = BluetoothGattDescriptor(
+             UUID_READ_DESCRIBE,
+             BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE
+        )
+
+        readNotifyChar.addDescriptor(readDescriptor)
+
+
         val writeChar = BluetoothGattCharacteristic(
             builder.writeUuid,
             BluetoothGattCharacteristic.PROPERTY_WRITE,
             BluetoothGattCharacteristic.PERMISSION_WRITE
         )
+        val writeDescriptor = BluetoothGattDescriptor(
+            UUID_WRITE_DESCRIBE,
+            BluetoothGattDescriptor.PERMISSION_WRITE or BluetoothGattDescriptor.PERMISSION_READ
+        )
+        writeChar.addDescriptor(writeDescriptor)
         pushLog("config characteristic ,write ,read nad notify")
 
 
@@ -107,6 +125,7 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener, "ser
             value
         )
 
+        Log.d(TAG, "zsr onCharacteristicWriteRequest: ${value?.size}")
         //当客户端写入数据时，会回调这里，需要调用 sendResponse 告诉客户端是否写入成功
         bluetoothGattServer?.sendResponse(
             device, requestId,

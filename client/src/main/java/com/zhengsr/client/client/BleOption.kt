@@ -1,4 +1,4 @@
-package com.zhengsr.server
+package com.zhengsr.client.client
 
 import android.content.Context
 import com.zhengsr.common.UUID_READ_NOTIFY
@@ -11,19 +11,21 @@ import java.util.UUID
  * describe：服务端配置
  */
 class BleOption private constructor(val builder: Builder)  {
-    companion object{
-        private const val MAX_NAME_SIZE = 20
-    }
-    
+
     class Builder{
-        internal var name: String? = null
+        internal var fliter: String? = null
         internal var logListener: ILogListener? = null
         internal var serviceUUid = UUID_SERVICE
         internal var writeUuid = UUID_WRITE
         internal var readAndNotifyUuid = UUID_READ_NOTIFY
         internal var context: Context? = null
-        fun context(context: Context): Builder{
+        internal var scanTime: Long = 5000L
+        fun context(context: Context): Builder {
             this.context = context
+            return this
+        }
+        fun scanTime(scanTime: Long): Builder {
+            this.scanTime = scanTime
             return this
         }
         fun serviceUuid(serviceUUid: UUID): Builder {
@@ -38,8 +40,8 @@ class BleOption private constructor(val builder: Builder)  {
             this.readAndNotifyUuid = readAndNotifyUuid
             return this
         }
-        fun name(name: String): Builder {
-            this.name = name
+        fun fliterName(name: String): Builder {
+            this.fliter = name
             return this
         }
         fun logListener(logListener: ILogListener): Builder {

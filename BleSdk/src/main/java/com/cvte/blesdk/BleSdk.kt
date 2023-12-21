@@ -3,8 +3,6 @@ package com.cvte.blesdk
 import android.annotation.SuppressLint
 import android.content.Context
 import com.cvte.blesdk.client.BleClient
-import com.zhengsr.server.BleOption
-import com.zhengsr.server.server.IBle
 
 /**
  * @author by zhengshaorui 2023/12/12

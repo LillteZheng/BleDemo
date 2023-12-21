@@ -2,7 +2,6 @@ package com.zhengsr.server.server
 
 import android.bluetooth.BluetoothDevice
 import com.zhengsr.server.BleError
-import com.zhengsr.server.BleOption
 import com.zhengsr.server.BleStatus
 
 /**
