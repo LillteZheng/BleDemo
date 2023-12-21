@@ -14,6 +14,10 @@ enum class BleError {
     PERMISSION_DENIED,
     GPS_NOT_OPEN,
 }
+enum class DataError{
+    NO_RESPONSE,
+    WRITE_FAIL
+}
 
 enum class BleStatus{
     SERVER_CONNECTED,
@@ -27,9 +31,10 @@ enum class GattStatus{
     //客户端
     CONNECT_TO_SERVER,
     DISCONNECT_FROM_SERVER,
-    WRITE_RESPONSE,
+    NORMAL_DATA,
     BLUE_NAME,
     MTU_CHANGE,
+    WRITE_RESPONSE,
     LOG
 }
 

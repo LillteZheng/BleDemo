@@ -101,3 +101,6 @@ onScanResult为扫描到的设备，可以通过beacon.name来判断是否是自
 ```kotlin
    BleClient.get().release()
 ```
+
+
+1. 有时发送完数据，就会断开连接，特别是在分包的时候

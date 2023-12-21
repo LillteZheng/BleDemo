@@ -1,14 +1,16 @@
 package com.zhengsr.client.client
 
-import android.Manifest
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.Build
+import android.os.Message
+import android.util.Log
 import com.zhengsr.client.BleError
 import com.zhengsr.client.BleStatus
+import com.zhengsr.client.DataError
 import com.zhengsr.client.GattStatus
 import com.zhengsr.client.ScanBeacon
 import com.zhengsr.client.gatt.AbsCharacteristic
@@ -17,6 +19,8 @@ import com.zhengsr.common.BleUtil
 import com.zhengsr.common.DATA_TYPE
 import com.zhengsr.common.DataSpilt
 import com.zhengsr.common.NAME_TYPE
+import java.util.LinkedList
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -24,13 +28,20 @@ import java.util.concurrent.atomic.AtomicBoolean
  * describe：
  */
 class BleImpl() : AbsBle(), IBle {
-
+    companion object{
+        private const val TAG = "BleImpl"
+        private const val MSG_SEND_DATA = 1;
+        private const val MSG_RESPONSE_TIMEOUT = 2;
+        //ble 发送数据时，前三个字段是固定的，所以这里是3
+        private const val BLE_DATA_HEAD = 3
+    }
     private var listener: IBle.IListener? = null
     private val isScanning = AtomicBoolean(false)
     private var gattChar: ClientGattChar? = null
     private var option: BleOption.Builder? = null
     private var scanSuccess = false
     private var mtu = 15
+
     override fun startScan(builder: BleOption, listener: IBle.IListener) {
         scanSuccess = false
         option = builder.builder
@@ -63,6 +74,8 @@ class BleImpl() : AbsBle(), IBle {
         }, option!!.scanTime)
     }
 
+    override fun isConnected() = gattChar?.isConnected() ?: false
+
     /**
      * 加重试机制
      */
@@ -83,7 +96,7 @@ class BleImpl() : AbsBle(), IBle {
                             listener?.onEvent(BleStatus.SERVER_DISCONNECTED,obj)
                             release()
                         }
-                        GattStatus.WRITE_RESPONSE ->{
+                        GattStatus.NORMAL_DATA ->{
                             listener?.onEvent(BleStatus.SERVER_WRITE,obj)
                         }
                         GattStatus.BLUE_NAME ->{
@@ -93,10 +106,17 @@ class BleImpl() : AbsBle(), IBle {
                         GattStatus.MTU_CHANGE ->{
                             mtu = obj?.toInt()?:15
                         }
-                       /* GattStatus.MTU ->{
-                            val name = bluetoothAdapter?.name?:"null"
-                            sendData(name.toByteArray(), NAME_TYPE)
-                        }*/
+                        GattStatus.WRITE_RESPONSE->{
+                            pushLog("write response,cache data size: ${dataQueue.size}")
+                            handler?.removeMessages(MSG_RESPONSE_TIMEOUT)
+                            if (dataQueue.isNotEmpty()){
+                                //还有数据,继续发
+                                handler?.sendEmptyMessage(MSG_SEND_DATA)
+                            }else{
+                                //没有数据了，回调成功
+                                writeListener?.onSuccess()
+                            }
+                        }
                         else -> {
                             pushLog("status: $status,obj:$obj")
                         }
@@ -108,11 +128,64 @@ class BleImpl() : AbsBle(), IBle {
         pushLog("connect to ${dev.name}")
         gattChar?.connectGatt(option?.context!!,dev)
     }
+    private var writeListener:IBle.IWrite? = null
+    private val dataQueue = LinkedList<ByteArray>()
+    private var writeFailCount = 0
+    override fun send(data:ByteArray,listener: IBle.IWrite){
+        writeListener = listener
+        writeFailCount = 0
+        if (!isConnected()){
+            pushLog("please connect to server first")
+            return
+        }
+        if (dataQueue.isNotEmpty()){
+            pushLog("data sending,please wait..")
+            return
+        }
 
-    override fun send(data:ByteArray){
-       // gattChar?.send(data)
 
-        sendData(data, DATA_TYPE)
+        dataQueue.clear()
+        subData(data, DATA_TYPE,mtu,dataQueue)
+        pushLog("send data size: ${dataQueue.size}")
+        handler?.removeMessages(MSG_SEND_DATA)
+        handler?.sendEmptyMessage(MSG_SEND_DATA)
+    }
+
+    override fun handleMessage(msg: Message) {
+        super.handleMessage(msg)
+        when(msg.what){
+            MSG_SEND_DATA->{
+                dataQueue.poll()?.let {
+                    val ret = gattChar?.send(it)
+                    pushLog("send success: $ret")
+                    if (ret == false) {
+                    //todo 如果失败了，重发3次，如果还是失败，就不发了
+                        //1. 把值重新填回去 dataQueue
+                        //2. 重新发送MSG_SEND_DATA消息，
+                        //3. 计算count，如果大于3，则表示失败了
+
+                        writeFailCount++
+                        if (writeFailCount > 3){
+                            writeListener?.onFail(DataError.WRITE_FAIL, "send failed")
+                            dataQueue.clear()
+
+                        }else{
+                            dataQueue.addFirst(it)
+                            handler?.sendEmptyMessageDelayed(MSG_SEND_DATA,200)
+                        }
+
+                      //  writeListener?.onFail(DataError.SEND_FAILED, "send failed")
+                    } else {
+                        handler?.removeMessages(MSG_RESPONSE_TIMEOUT)
+                        handler?.sendEmptyMessageDelayed(MSG_RESPONSE_TIMEOUT, waitResponseTime)
+                    }
+                }
+            }
+            MSG_RESPONSE_TIMEOUT->{
+                //没有回复，失败了
+                writeListener?.onFail(DataError.NO_RESPONSE,"server not response")
+            }
+        }
     }
 
      fun sendData(data: ByteArray,type:Byte) {
@@ -180,14 +253,15 @@ class BleImpl() : AbsBle(), IBle {
             }
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            //貌似不需要检测这两个？
             /*if (!BleUtil.isPermission(context, Manifest.permission.BLUETOOTH_CONNECT)) {
                 listener.onFail(BleError.PERMISSION_DENIED, "BLUETOOTH_CONNECT permission denied")
                return  false
             }*/
-            if (!BleUtil.isPermission(context, Manifest.permission.BLUETOOTH_SCAN)) {
+            /*if (!BleUtil.isPermission(context, Manifest.permission.BLUETOOTH_SCAN)) {
                 listener.onFail(BleError.PERMISSION_DENIED, "BLUETOOTH_SCAN permission denied")
                 return  false
-            }
+            }*/
 
 
         }

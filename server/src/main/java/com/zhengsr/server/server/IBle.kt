@@ -21,7 +21,6 @@ interface IBle {
         fun onEvent(status: BleStatus, obj: String?)
     }
     interface IWrite {
-        fun onStart()
         fun onSuccess()
         fun onFail(errorMsg:String)
     }

@@ -16,8 +16,6 @@ import com.zhengsr.common.UUID_READ_DESCRIBE
 import com.zhengsr.common.UUID_READ_NOTIFY
 import com.zhengsr.common.UUID_SERVICE
 import com.zhengsr.common.UUID_WRITE
-import java.util.UUID
-import java.util.concurrent.ConcurrentLinkedQueue
 
 
 /**
@@ -48,7 +46,7 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         //todo 133 问题，需要重新扫描再配对
         if (newState == BluetoothProfile.STATE_CONNECTED) {
             //todo 提前设置 mtu？
-          //  gatt?.requestMtu(500)
+            //  gatt?.requestMtu(500)
             gatt?.discoverServices()
 
         } else {
@@ -118,7 +116,7 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
                 val status = when (type) {
                     //MTU_TYPE-> GattStatus.MTU_CHANGE
                     NAME_TYPE -> GattStatus.BLUE_NAME
-                    else -> GattStatus.WRITE_RESPONSE
+                    else -> GattStatus.NORMAL_DATA
                 }
                 listener.onEvent(status, String(data))
             }
@@ -132,31 +130,18 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         status: Int
     ) {
         super.onCharacteristicWrite(gatt, characteristic, status)
-        //todo 这里需要判断是否发送成功
-        Log.d(TAG, "zsr onCharacteristicWrite: ${queue.size}")
-        if (status == BluetoothGatt.GATT_SUCCESS) {
-            queue.poll()?.let {
-                send(it)
-            }
-        }
+        listener.onEvent(GattStatus.WRITE_RESPONSE, status.toString())
     }
 
 
-    private val queue = ConcurrentLinkedQueue<ByteArray>()
     @Synchronized
     fun send(data: ByteArray): Boolean {
         //uuid 是一对的
-
-        queue.add(data)
         val isSuccess = blueGatt?.getService(UUID_SERVICE)?.getCharacteristic(UUID_WRITE)?.let {
             it.value = data
             blueGatt?.writeCharacteristic(it)
         } ?: false
         //需要放队列里面，重新发
-        if (isSuccess) {
-            queue.poll()
-        }
-        Log.d(TAG, "zsr send: $isSuccess")
         return isSuccess
     }
 

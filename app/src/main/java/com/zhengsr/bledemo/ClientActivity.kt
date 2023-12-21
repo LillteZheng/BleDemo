@@ -19,9 +19,11 @@ import com.zhengsr.bledemo.databinding.ActivityClientBinding
 import com.zhengsr.client.BleClient
 import com.zhengsr.client.BleError
 import com.zhengsr.client.BleStatus
+import com.zhengsr.client.DataError
 import com.zhengsr.client.ScanBeacon
 import com.zhengsr.client.client.BleOption
 import com.zhengsr.client.client.IBle
+import java.io.PushbackInputStream
 
 class ClientActivity : AppCompatActivity(), OnItemClickListener {
     companion object{
@@ -141,7 +143,16 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
 
     fun writeData(view: View) {
         val msg = binding.edit.text.toString().trim()
-        BleClient.get().send(msg.toByteArray())
+        BleClient.get().send(msg.toByteArray(), object : IBle.IWrite {
+            override fun onSuccess() {
+                appInfo("发送成功")
+            }
+
+            override fun onFail(dataError: DataError, errorMsg: String) {
+                appInfo("发送失败：$errorMsg")
+            }
+
+        })
     }
 
     fun appInfo(msg:String){
