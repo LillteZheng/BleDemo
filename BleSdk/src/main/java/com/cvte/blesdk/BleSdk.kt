@@ -3,7 +3,8 @@ package com.cvte.blesdk
 import android.annotation.SuppressLint
 import android.content.Context
 import com.cvte.blesdk.client.BleClient
-import com.cvte.blesdk.server.BleServer
+import com.zhengsr.server.BleOption
+import com.zhengsr.server.server.IBle
 
 /**
  * @author by zhengshaorui 2023/12/12
@@ -11,20 +12,13 @@ import com.cvte.blesdk.server.BleServer
  */
 @SuppressLint("StaticFieldLeak")
 object BleSdk {
-    private var server: BleServer? = null
     private var client: BleClient? = null
     internal var context:Context? = null
     internal fun inject(context: Context?){
         this.context = context
     }
-    @Synchronized
-    @JvmStatic
-    fun getServer() : BleServer {
-        if (server == null) {
-            server = BleServer()
-        }
-        return server!!
-    }
+
+
     @Synchronized
     @JvmStatic
     fun getClient() : BleClient {
@@ -38,7 +32,6 @@ object BleSdk {
     @Synchronized
     @JvmStatic
     fun release(){
-        server?.release()
-        server = null
+
     }
 }

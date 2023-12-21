@@ -12,9 +12,11 @@ import androidx.core.app.ActivityCompat
 import com.cvte.blesdk.BleError
 import com.cvte.blesdk.BleSdk
 import com.cvte.blesdk.ServerStatus
-import com.cvte.blesdk.server.BleServerOption
-import com.cvte.blesdk.server.IServerBle
+import com.cvte.blesdk.abs.IBle
 import com.zhengsr.bledemo.databinding.ActivityServerBinding
+import com.zhengsr.server.BleOption
+import com.zhengsr.server.BleServer
+import com.zhengsr.server.BleStatus
 
 class ServerActivity : AppCompatActivity() {
     companion object{
@@ -49,41 +51,47 @@ class ServerActivity : AppCompatActivity() {
 
     @SuppressLint("MissingPermission")
     fun openServer(view: View) {
-        val option = BleServerOption.Builder()
+
+
+
+        val builder = BleOption.Builder()
+            .context(this)
             .name("Vieunite_345663")
-            .logListener(object : BleServerOption.ILogListener {
+            .logListener(object:BleOption.ILogListener{
                 override fun onLog(log: String) {
                     Log.d(TAG, "$log")
                 }
             }).build()
 
-        BleSdk.getServer().startServer(option, object : IServerBle.IBleEventListener {
-            override fun onEvent(serverStatus: ServerStatus, obj: String?) {
-                when(serverStatus){
-                    ServerStatus.ADVERTISE_SUCCESS -> {
+
+        BleServer.get().startServer(builder, object : com.zhengsr.server.server.IBle.IListener {
+            override fun onFail(error: com.zhengsr.server.BleError, errorMsg: String) {
+                appInfo("失败: error = $error, errorMsg = $errorMsg")
+            }
+
+            override fun onEvent(status: BleStatus, obj: String?) {
+                when(status){
+                    BleStatus.ADVERTISE_SUCCESS -> {
                         appInfo("开启广播成功，请搜索设备：$obj")
                     }
-                    ServerStatus.CLIENT_CONNECTED -> {
+                    BleStatus.CLIENT_CONNECTED -> {
                         appInfo("设备($obj)，连接成功，可以通信了")
                     }
-                    ServerStatus.CLIENT_DISCONNECT -> {
+                    BleStatus.CLIENT_DISCONNECT -> {
                         appInfo("设备($obj)，断开连接")
                     }
-                    ServerStatus.CLIENT_WRITE->{
+                    BleStatus.DATA->{
                         appInfo("收到数据: $obj")
                     }
                     else -> {
-                        appInfo("事件: serverStatus = $serverStatus, obj = $obj")
+                        appInfo("事件: serverStatus = $status, obj = $obj")
                     }
                 }
             }
 
-
-            override fun onFail(error: BleError, errorMsg: String) {
-                appInfo("失败: error = $error, errorMsg = $errorMsg")
-            }
-
         })
+
+
 
     }
 
@@ -96,13 +104,13 @@ class ServerActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
       //  BleSdk.getServer().release()
-        BleSdk.getServer().release()
+        BleServer.get().release()
     }
 
     fun send(view: View) {
         Log.d(TAG, "zsr send: ${msg.length} ${msg.toByteArray().size}")
         val msg = binding.editMsg.text.trim().toString()
-        BleSdk.getServer().send(msg.toByteArray())
+        BleServer.get().send(msg.toByteArray())
     }
 
     private val msg = """

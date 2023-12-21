@@ -1,4 +1,4 @@
-package com.cvte.blesdk.server
+package com.zhengsr.server
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.le.AdvertiseCallback

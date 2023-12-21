@@ -1,25 +1,26 @@
-package com.cvte.blesdk.server
+package com.zhengsr.server.server
 
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseSettings
+import android.content.Context
 import android.os.Message
-import com.cvte.blesdk.BleError
-import com.cvte.blesdk.DataPackageManager
-import com.cvte.blesdk.BleSdk
-import com.cvte.blesdk.DATA_TYPE
-import com.cvte.blesdk.GattStatus
-import com.cvte.blesdk.MTU_TYPE
-import com.cvte.blesdk.ServerStatus
-import com.cvte.blesdk.abs.AbsBle
-import com.cvte.blesdk.abs.IBle
-import com.cvte.blesdk.characteristic.AbsCharacteristic
-import com.cvte.blesdk.characteristic.ServerGattChar
+import com.zhengsr.common.DATA_TYPE
+import com.zhengsr.common.DataSpilt
+import com.zhengsr.server.BleAdvServer
+import com.zhengsr.server.BleError
+import com.zhengsr.server.BleOption
+import com.zhengsr.server.BleStatus
+import com.zhengsr.server.GattStatus
+import com.zhengsr.server.gatt.AbsCharacteristic
+import com.zhengsr.server.gatt.ServerGattChar
+
 
 /**
  * @author by zhengshaorui 2023/12/12
  * describe：蓝牙服务端，主要负责发送广播，开启蓝牙服务
  */
-class BleServer : AbsBle(BleSdk.context),IServerBle {
+internal class BleConsumer : AbsBle(), IBle {
     companion object {
         private const val TAG = "BleServer"
         private const val MAX_NAME_SIZE = 20
@@ -28,23 +29,28 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
         private const val TIME_OUT = 1000L
     }
 
-    private var option: BleServerOption.Builder? = null
-    private var iBleListener: IServerBle.IBleEventListener? = null
+    private var listener: IBle.IListener? = null
     private var gattServer: ServerGattChar? = null
     private var bleAdvServer: BleAdvServer? = null
 
     private var clientName = "null"
-
-    override fun startServer(bleOption: BleServerOption, iBleListener: IServerBle.IBleEventListener) {
-        this.option = bleOption.builder
-        this.iBleListener = iBleListener
-        if (!checkPermission(iBleListener)) {
+    private var mtu = 15
+    private var option: BleOption.Builder? = null
+    override fun startServer(builder: BleOption, listener: IBle.IListener) {
+        this.option = builder.builder
+        this.listener = listener
+        if (!checkPermission(option?.context,listener)) {
             return
         }
-        if (isGattConnected()){
-            iBleListener.onFail(BleError.ADVERTISE_FAILED,
-                "gatt is connected,please disconnect first")
+        if (isGattConnected()) {
+            listener.onFail(
+                BleError.ADVERTISE_FAILED,
+                "gatt is connected,please disconnect first"
+            )
             return
+        }
+        if (handler == null) {
+            initHandle()
         }
         closeServer()
         //开启广播
@@ -60,14 +66,15 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
 
     override fun handleMessage(msg: Message) {
         super.handleMessage(msg)
-        when(msg.what){
-            MSG_WAIT_NAME->{
-                val name = msg.obj?.let { mag->
+        when (msg.what) {
+            MSG_WAIT_NAME -> {
+                val name = msg.obj?.let { mag ->
                     mag as String
-                }?:"null"
-                iBleListener?.onEvent(ServerStatus.CLIENT_CONNECTED, name)
+                } ?: "null"
+                listener?.onEvent(BleStatus.CLIENT_CONNECTED, name)
             }
-            MSG_RESTART_AD->{
+
+            MSG_RESTART_AD -> {
                 if (bleAdvServer == null) {
                     bleAdvServer = BleAdvServer(bluetoothAdapter!!)
                 }
@@ -82,7 +89,6 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
     }
 
     override fun release() {
-        DataPackageManager.resetBuffer()
         bleAdvServer?.stopBroadcast()
         bleAdvServer = null
         gattServer?.release()
@@ -92,20 +98,22 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
     }
 
 
-
     private fun isGattConnected(): Boolean {
         return gattServer?.isConnected() ?: false
     }
 
 
     override fun closeServer() {
-        DataPackageManager.resetBuffer()
         pushLog("close server if need: bleAdvServer:$bleAdvServer, gattServer:$gattServer")
         bleAdvServer?.stopBroadcast()
         gattServer?.release()
         bleAdvServer = null
         gattServer = null
 
+    }
+
+    override fun cancelConnect(dev: BluetoothDevice) {
+        gattServer?.cancelConnection(dev)
     }
 
 
@@ -117,19 +125,19 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
                 override fun onEvent(status: GattStatus, obj: String?) {
                     pushLog("server status change:$status")
                     when (status) {
-                        GattStatus.CLIENT_READ -> {
-                          //  pushLog("receiver data:${String(obj as ByteArray)}")
-                            iBleListener?.onEvent(ServerStatus.CLIENT_WRITE, obj)
+                        GattStatus.WRITE_RESPONSE -> {
+                            //  pushLog("receiver data:${String(obj as ByteArray)}")
+                            listener?.onEvent(BleStatus.DATA, obj)
                         }
 
-                        GattStatus.SERVER_DISCONNECTED -> {
+                        GattStatus.CLIENT_DISCONNECTED -> {
                             pushLog("client ($clientName) disconnect,reset advertise and gatt service")
-                            iBleListener?.onEvent(ServerStatus.CLIENT_DISCONNECT,clientName)
+                            listener?.onEvent(BleStatus.CLIENT_DISCONNECT, clientName)
                             closeServer()
-                            handler?.sendEmptyMessageDelayed(MSG_RESTART_AD,500)
+                            handler?.sendEmptyMessageDelayed(MSG_RESTART_AD, 500)
                         }
 
-                        GattStatus.SERVER_CONNECTED->{
+                        GattStatus.CLIENT_CONNECTED -> {
                             handler?.removeMessages(MSG_WAIT_NAME)
                             Message.obtain().apply {
                                 what = MSG_WAIT_NAME
@@ -137,9 +145,10 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
                                 handler?.sendMessageDelayed(this, TIME_OUT)
                             }
                         }
-                        GattStatus.BLUE_NAME->{
+
+                        GattStatus.BLUE_NAME -> {
                             pushLog("client name:$obj")
-                            //iBleListener?.onEvent(ServerStatus.CLIENT_CONNECTED,obj)
+                            //iBleListener?.onEvent(BleStatus.CLIENT_CONNECTED,obj)
                             clientName = obj!!
                             handler?.removeMessages(MSG_WAIT_NAME)
                             Message.obtain().apply {
@@ -148,9 +157,11 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
                                 handler?.sendMessage(this)
                             }
                         }
-                        GattStatus.MTU->{
-                            sendData(MTU_TYPE,byteArrayOf(0x00))
+                        GattStatus.MTU_CHANGE ->{
+                            mtu = obj?.toInt() ?: 15
                         }
+
+
                         else -> {
                             pushLog("$obj ,  status change:$status")
                         }
@@ -159,7 +170,7 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
 
             })
         }
-        gattServer?.startGattService(option!!)
+        gattServer?.startGattService(option?.context!!, option!!)
     }
 
 
@@ -167,7 +178,7 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
         override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
             super.onStartSuccess(settingsInEffect)
             pushLog("advertise success,try to start gatt service")
-            iBleListener?.onEvent(ServerStatus.ADVERTISE_SUCCESS,bluetoothAdapter?.name)
+            listener?.onEvent(BleStatus.ADVERTISE_SUCCESS, bluetoothAdapter?.name)
             startGattService()
         }
 
@@ -203,12 +214,13 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
     }
 
 
-    override fun send(data: ByteArray){
-        sendData(DATA_TYPE,data)
+    override fun send(data: ByteArray) {
+        sendData(DATA_TYPE, data)
     }
 
-    private fun sendData(type:Byte,data: ByteArray){
-        DataPackageManager.splitPacket(data, type, object : DataPackageManager.ISplitListener {
+    private fun sendData(type: Byte, data: ByteArray) {
+
+        DataSpilt.subData(mtu,data, type, object : DataSpilt.ISplitListener {
             override fun onResult(data: ByteArray) {
                 gattServer?.send(data)
             }
@@ -218,14 +230,18 @@ class BleServer : AbsBle(BleSdk.context),IServerBle {
 
 
     private fun fail(error: BleError, msg: String) {
-        iBleListener?.onFail(error, msg)
+        listener?.onFail(error, msg)
     }
 
 
-    override fun checkPermission(listener: IBle.IListener): Boolean {
-        var permission =  super.checkPermission(listener)
-        if(option?.name == null || option?.name?.length!! > MAX_NAME_SIZE){
-            listener.onFail(BleError.PERMISSION_DENIED,"name is null or length > $MAX_NAME_SIZE")
+    override fun checkPermission(context: Context?,listener: IBle.IListener): Boolean {
+        var permission = super.checkPermission(context,listener)
+        if (option?.context == null){
+            listener.onFail(BleError.CONTEXT_NULL, "context is null")
+            permission = false
+        }
+        if (option?.name == null || option?.name?.length!! > MAX_NAME_SIZE) {
+            listener.onFail(BleError.NAME_TOO_LONG, "name is null or length > $MAX_NAME_SIZE")
             permission = false
         }
         return permission

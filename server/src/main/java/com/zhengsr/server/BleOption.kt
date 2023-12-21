@@ -1,15 +1,16 @@
-package com.cvte.blesdk.server
+package com.zhengsr.server
 
-import com.cvte.blesdk.UUID_READ_NOTIFY
-import com.cvte.blesdk.UUID_SERVICE
-import com.cvte.blesdk.UUID_WRITE
+import android.content.Context
+import com.zhengsr.common.UUID_READ_NOTIFY
+import com.zhengsr.common.UUID_SERVICE
+import com.zhengsr.common.UUID_WRITE
 import java.util.UUID
 
 /**
  * @author by zhengshaorui 2023/12/14
  * describe：服务端配置
  */
-class BleServerOption private constructor( val builder: Builder)  {
+class BleOption private constructor(val builder: Builder)  {
     companion object{
         private const val MAX_NAME_SIZE = 20
     }
@@ -20,15 +21,20 @@ class BleServerOption private constructor( val builder: Builder)  {
         internal var serviceUUid = UUID_SERVICE
         internal var writeUuid = UUID_WRITE
         internal var readAndNotifyUuid = UUID_READ_NOTIFY
-        fun serviceUuid(serviceUUid: UUID): Builder{
+        internal var context: Context? = null
+        fun context(context: Context): Builder{
+            this.context = context
+            return this
+        }
+        fun serviceUuid(serviceUUid: UUID): Builder {
             this.serviceUUid = serviceUUid
             return this
         }
-        fun writeUuid(writeUuid: UUID): Builder{
+        fun writeUuid(writeUuid: UUID): Builder {
             this.writeUuid = writeUuid
             return this
         }
-        fun readAndNotifyUuid(readAndNotifyUuid: UUID): Builder{
+        fun readAndNotifyUuid(readAndNotifyUuid: UUID): Builder {
             this.readAndNotifyUuid = readAndNotifyUuid
             return this
         }
@@ -41,8 +47,8 @@ class BleServerOption private constructor( val builder: Builder)  {
             return this
         }
 
-        fun build(): BleServerOption {
-            return BleServerOption(this)
+        fun build(): BleOption {
+            return BleOption(this)
         }
 
 

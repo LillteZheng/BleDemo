@@ -17,3 +17,5 @@ dependencyResolutionManagement {
 rootProject.name = "BleDemo"
 include ':app'
 include ':BleSdk'
+include ':common'
+include ':server'

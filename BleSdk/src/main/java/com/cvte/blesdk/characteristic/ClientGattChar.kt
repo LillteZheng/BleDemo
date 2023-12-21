@@ -69,8 +69,8 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
     override fun onClientConnectService(gatt: BluetoothGatt?, status: Int) {
         super.onClientConnectService(gatt, status)
         blueGatt = gatt
-        gatt?.requestMtu(MTU)
-        DataPackageManager.setMtu(MTU)
+       // gatt?.requestMtu(MTU)
+       // DataPackageManager.setMtu(MTU)
 
         gatt?.getService(UUID_SERVICE)?.let {
             it.getCharacteristic(UUID_READ_NOTIFY)?.let { char ->
