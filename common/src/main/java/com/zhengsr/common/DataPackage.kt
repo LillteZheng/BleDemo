@@ -13,7 +13,7 @@ class DataPackage(val formatLen: Int) {
     }
 
     private var buffer: ByteBuffer? = null
-    private var type: Byte = 0
+ //   private var type: Byte = 0
     private var count = 0
 
     interface IPackageListener {
@@ -21,30 +21,51 @@ class DataPackage(val formatLen: Int) {
     }
 
     /**
-     * 发送数据，采用以下格式
-     * 第一个表示标志位采用两个字节，表示uuid后四位
-     * 第二个表示类型，采用1个字节，比如notify，wirite等
-     * 第三个表示数据长度：考虑到超过255，所以采用2个字节
-     * 第四个表示数据，最大14个字节，如果设置了 mtu，则最大为 mtu - 5
-     * 如果有 uuid 标志位，则表示是第一包，否则表示是后续包
-     *  0               8               16              24            31
+     * 0               8               16              24
      *  0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
      * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |              UUID             |      type     |      len      |
+     * |      flag     |  packet_type  |         packet_length         |
      * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |               |                                               |
+     * |             count             |             index             |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |    version    |                                               |
      * +-+-+-+-+-+-+-+-+                                               +
-     * |                                                               |
-     * +                                                               +
-     * |                            payload                            |
-     * +                                               +-+-+-+-+-+-+-+-+
-     * |                                               |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |                              data                             |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * flag: 0x78
+     * type: byte ，data，name
+     * len: 2 byte
+     * count : 2 byte ,ios mtu 最小是100，2byte 比较保险
+     * index : 2 byte
+     * version : 1 byte
      */
     @Synchronized
     fun formData(value: ByteArray, listener: IPackageListener) {
         try {
-            if (value[0] == 0x78.toByte() && value.size >= formatLen && buffer == null) {
+            if (value.size < formatLen) {
+                return
+            }
+            val flag = value[0]
+            val type = value[1]
+            val len = ((value[2].toInt() shl 8) or (value[3].toInt() and 0xFF))
+            count = ((value[4].toInt() shl 8) or (value[5].toInt() and 0xFF))
+            val index = ((value[6].toInt() shl 8) or (value[7].toInt() and 0xFF))
+            val version = value[8]
+            Log.d(TAG, "zsr formData: flag = $flag ,type = $type ,len = $len ,count = $count ,index = $index ,version = $version")
+            if (flag == DATA_FLAG){
+                if (buffer == null) {
+                    buffer = ByteBuffer.allocate(len)
+                }
+                buffer?.apply {
+                    put(value, formatLen, value.size - formatLen)
+                    if (position() >= limit()) {
+                        listener.onResult(type, array())
+                        resetBuffer()
+                    }
+                }
+            }
+
+            /*if (value[0] == 0x78.toByte() && value.size >= formatLen && buffer == null) {
                 Log.d(TAG, "zsr 第一个包")
                 type = value[1]
                 val len = ((value[2].toInt() shl 8) or (value[3].toInt() and 0xFF))
@@ -56,6 +77,12 @@ class DataPackage(val formatLen: Int) {
                         TAG,
                         "zsr packageData: 第一个 $count,:${value.size} ,${position()} ,${limit()}"
                     )
+
+                    try {
+                        val msg = String(value)
+                        Log.d(TAG, "count（${count}）: $msg")
+                    } catch (e: Exception) {
+                    }
                     if (position() >= limit()) {
                         listener.onResult(type, array())
                         resetBuffer()
@@ -65,6 +92,11 @@ class DataPackage(val formatLen: Int) {
 
             } else {
                 count++
+                try {
+                    val msg = String(value)
+                    Log.d(TAG, "count（${count}）: $msg")
+                } catch (e: Exception) {
+                }
                 buffer?.apply {
                     Log.d(TAG, "zsr formData: ${value.size} ${remaining()}")
                     if (value.size > remaining()) {
@@ -85,7 +117,7 @@ class DataPackage(val formatLen: Int) {
                         resetBuffer()
                     }
                 }
-            }
+            }*/
         } catch (e: Exception) {
             resetBuffer()
             Log.e(TAG, " formData: $e")

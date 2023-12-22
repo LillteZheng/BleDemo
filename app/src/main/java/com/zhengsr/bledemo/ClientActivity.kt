@@ -167,7 +167,7 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
 
     override fun onDestroy() {
         super.onDestroy()
-        BleClient.get().release()
+        BleClient.release()
     }
 
     fun disconnect(view: View) {

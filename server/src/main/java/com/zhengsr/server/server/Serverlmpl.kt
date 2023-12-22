@@ -5,10 +5,7 @@ import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
 import android.os.Message
-import android.util.Log
 import com.zhengsr.common.DATA_TYPE
-import com.zhengsr.common.DataSpilt
-import com.zhengsr.common.DataSpilt.subData
 import com.zhengsr.common.FORMAT_LEN
 import com.zhengsr.server.BleError
 import com.zhengsr.server.BleStatus
@@ -22,7 +19,7 @@ import java.util.LinkedList
  * @author by zhengshaorui 2023/12/12
  * describe：蓝牙服务端，主要负责发送广播，开启蓝牙服务
  */
-internal class BleImp : AbsBle(), IBle {
+internal class Serverlmpl : AbsBle(), IBle {
     companion object {
         private const val TAG = "BleServer"
         private const val DEFAULT_MTU = 19
@@ -42,6 +39,9 @@ internal class BleImp : AbsBle(), IBle {
     private var clientName = "null"
     private var mtu = DEFAULT_MTU - FORMAT_LEN
     private var option: BleOption.Builder? = null
+    private var writeListener:IBle.IWrite? = null
+    private val dataQueue = LinkedList<ByteArray>()
+    private var writeFailCount = 0
     override fun startServer(builder: BleOption, listener: IBle.IListener) {
         this.option = builder.builder
         this.listener = listener
@@ -251,9 +251,7 @@ internal class BleImp : AbsBle(), IBle {
     }
 
 
-    private var writeListener:IBle.IWrite? = null
-    private val dataQueue = LinkedList<ByteArray>()
-    private var writeFailCount = 0
+
     override fun send(data: ByteArray,iWrite: IBle.IWrite) {
         writeListener = iWrite
         /**
@@ -280,19 +278,7 @@ internal class BleImp : AbsBle(), IBle {
         //sendData(DATA_TYPE, data)
     }
 
-    private fun sendData(type: Byte, data: ByteArray) {
-        Log.d(TAG, "zsr sendData: $mtu")
-        handler?.post {
 
-            DataSpilt.subData(mtu,data, type, object : DataSpilt.ISplitListener {
-                override fun onResult(data: ByteArray) {
-                    val isS = gattServer?.send(data)
-                    pushLog("send data:${data.size} $isS")
-                }
-
-            })
-        }
-    }
 
 
     private fun fail(error: BleError, msg: String) {

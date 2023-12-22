@@ -1,7 +1,7 @@
 package com.zhengsr.server
 
 import com.zhengsr.server.server.IBle
-import com.zhengsr.server.server.BleImp
+import com.zhengsr.server.server.Serverlmpl
 
 /**
  * @author by zhengshaorui 2023/12/21
@@ -15,7 +15,7 @@ object BleServer {
     @JvmStatic
     fun get(): IBle{
         if (server == null) {
-            server = BleImp()
+            server = Serverlmpl()
         }
         return server!!
     }

@@ -13,6 +13,7 @@ import androidx.core.util.size
 
 import com.zhengsr.common.BleUtil
 import com.zhengsr.common.DATA_FLAG
+import com.zhengsr.common.VERSION
 import com.zhengsr.server.BleError
 import java.util.LinkedList
 
@@ -85,24 +86,48 @@ abstract class AbsBle{
     }
 
 
+    /**
+     * 0               8               16              24
+     *  0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |      flag     |  packet_type  |         packet_length         |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |             count             |             index             |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |    version    |                                               |
+     * +-+-+-+-+-+-+-+-+                                               +
+     * |                              data                             |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * flag: 0x78
+     * type: byte ，data，name
+     * len: 2 byte
+     * count : 2 byte ,ios mtu 最小是100，2byte 比较保险
+     * index : 2 byte
+     * version : 1 byte
+     */
     fun subData(data: ByteArray, type: Byte, mtu: Int,queue: LinkedList<ByteArray>) {
-        val datas = BleUtil.subpackage(data, mtu)
-        datas.forEach { index, bytes ->
+        val spiltData = BleUtil.subpackage(data, mtu)
+        spiltData.forEach { index, bytes ->
             //格式+数据
-            if (index == 0) {
-                //第一个包，包含所有的标志位
-                //两个字节，表示数据长度
-                val highByte = (data.size shr 8).toByte()
-                val lowByte = (data.size and 0xFF).toByte()
-                val byte = byteArrayOf(DATA_FLAG, type, highByte, lowByte).plus(bytes)
-                // listener.onResult(byte)
-                queue.add(byte)
-            } else {
-                //数据包
-                // sendData(bytes)
-                // listener.onResult(bytes)
-                queue.add(bytes)
-            }
+            //第一个包，包含所有的标志位
+            //两个字节，表示数据长度
+            val sizeHigh = (data.size shr 8).toByte()
+            val sizeLow = (data.size and 0xFF).toByte()
+
+            val countHigh = (spiltData.size shr 8).toByte()
+            val countLow = (spiltData.size and 0xFF).toByte()
+
+            val indexHigh = (index shr 8).toByte()
+            val indexLow = (index and 0xFF).toByte()
+
+            val versionByte = VERSION.toByte() //版本号
+
+
+            val byte = byteArrayOf(DATA_FLAG, type, sizeHigh, sizeLow,
+                countHigh,countLow,indexHigh,indexLow,versionByte).plus(bytes)
+            // listener.onResult(byte)
+            queue.add(byte)
+
         }
     }
 

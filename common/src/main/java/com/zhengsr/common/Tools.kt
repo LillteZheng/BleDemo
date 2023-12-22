@@ -1,7 +1,5 @@
 package com.zhengsr.common
 
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.le.ScanRecord
 import java.util.UUID
 
 
@@ -17,6 +15,9 @@ val DATA_FLAG = 0X78.toByte()
 val NAME_TYPE = 0X00.toByte()
 val DATA_TYPE = 0X01.toByte()
 val MTU_TYPE = 0X02.toByte()
-val FORMAT_LEN = 4
+val FORMAT_LEN = 9
+val VERSION = 1
+
+
 
 

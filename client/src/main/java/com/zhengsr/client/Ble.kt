@@ -13,6 +13,7 @@ enum class BleError {
     BLUETOOTH_NOT_OPEN,
     PERMISSION_DENIED,
     GPS_NOT_OPEN,
+    CONNECT_TIMEOUT
 }
 enum class DataError{
     NO_RESPONSE,
@@ -35,7 +36,15 @@ enum class GattStatus{
     SEND_BLUE_NAME,
     MTU_CHANGE,
     WRITE_RESPONSE,
+    CONNECT_FAIL,
     LOG
+}
+
+enum class LastState {
+    IDEL, 
+    CONNECTING,
+    CONNECTED,
+    DISCONNECT
 }
 
 data class ScanBeacon(val name:String?, val rssi:Int, val device: BluetoothDevice?, val record: ScanRecord?)

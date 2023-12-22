@@ -9,6 +9,7 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import com.zhengsr.client.GattStatus
+import com.zhengsr.client.LastState
 import com.zhengsr.common.DataPackage
 import com.zhengsr.common.FORMAT_LEN
 import com.zhengsr.common.NAME_TYPE
@@ -26,8 +27,10 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
 
     private var dataPackage: DataPackage? = null
     private var blueGatt: BluetoothGatt? = null
+    private var lastState = LastState.IDEL
     fun connectGatt(context: Context, dev: BluetoothDevice) {
         dataPackage?.resetBuffer()
+        lastState = LastState.CONNECTING
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             dev.connectGatt(
                 context,
@@ -45,15 +48,16 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         pushLog("onClientStateChange() called with: gatt = $gatt, status = $status, newState = $newState")
         //todo 133 问题，需要重新扫描再配对
         if (newState == BluetoothProfile.STATE_CONNECTED) {
-            //todo 提前设置 mtu？
             gatt?.requestMtu(500)
-           // gatt?.discoverServices()
-
-        } else {
-            isConnect = false
-            listener.onEvent(GattStatus.DISCONNECT_FROM_SERVER, gatt?.device?.name)
-            release()
-
+        } else if (newState == BluetoothProfile.STATE_DISCONNECTED){
+            if (lastState == LastState.CONNECTING){
+                //连接中失败，重试几次
+                listener.onEvent(GattStatus.CONNECT_FAIL, gatt?.device?.name)
+            }else {
+                isConnect = false
+                listener.onEvent(GattStatus.DISCONNECT_FROM_SERVER, gatt?.device?.name)
+                release()
+            }
         }
     }
 
@@ -69,6 +73,8 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         )
     }
 
+
+
     override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
         super.onServicesDiscovered(gatt, status)
         isConnect = true
@@ -76,8 +82,10 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         if (status == BluetoothGatt.GATT_SUCCESS) {
             //支持通知属性，当设置为true,onCharacteristicChanged 会回调
             gatt?.getService(UUID_SERVICE)?.getCharacteristic(UUID_READ_NOTIFY)?.let { char ->
+                Log.d(TAG, "zsr onServicesDiscovered: $char")
                 val isSuccess = gatt.setCharacteristicNotification(char, true)
                 val descriptor = char.getDescriptor(UUID_READ_DESCRIBE)
+                Log.d(TAG, "zsr onServicesDiscovered: $descriptor")
                 descriptor?.let {
                     it.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
                     gatt.writeDescriptor(it)
@@ -133,7 +141,23 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         super.onCharacteristicWrite(gatt, characteristic, status)
         listener.onEvent(GattStatus.WRITE_RESPONSE, status.toString())
     }
-
+    @Synchronized
+    fun refreshDeviceCache() {
+        try {
+            if (isConnect) {
+                blueGatt?.disconnect()
+                blueGatt?.close()
+            }
+            val refresh = BluetoothGatt::class.java.getMethod("refresh")
+            if (refresh != null && blueGatt != null) {
+                val success = refresh.invoke(blueGatt) as Boolean
+                Log.d(TAG,"refreshDeviceCache, is success:  $success")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG,"exception occur while refreshing device: " + e.message)
+            e.printStackTrace()
+        }
+    }
 
     @Synchronized
     fun send(data: ByteArray): Boolean {
@@ -147,7 +171,10 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
     }
 
 
+
+
     fun release() {
+        lastState = LastState.IDEL
         blueGatt?.let {
             it.close()
             it.disconnect()

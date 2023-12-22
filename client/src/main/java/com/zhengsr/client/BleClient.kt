@@ -1,6 +1,6 @@
 package com.zhengsr.client
 
-import com.zhengsr.client.client.BleImpl
+import com.zhengsr.client.client.ClientImpl
 import com.zhengsr.client.client.IBle
 
 /**
@@ -14,7 +14,7 @@ object BleClient {
     @JvmStatic
     fun get(): IBle {
         if (client == null) {
-            client = BleImpl()
+            client = ClientImpl()
         }
         return client!!
     }
