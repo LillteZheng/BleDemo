@@ -50,14 +50,17 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         if (newState == BluetoothProfile.STATE_CONNECTED) {
             gatt?.requestMtu(500)
         } else if (newState == BluetoothProfile.STATE_DISCONNECTED){
+            isConnect = false
             if (lastState == LastState.CONNECTING){
                 //连接中失败，重试几次
                 listener.onEvent(GattStatus.CONNECT_FAIL, gatt?.device?.name)
             }else {
-                isConnect = false
                 listener.onEvent(GattStatus.DISCONNECT_FROM_SERVER, gatt?.device?.name)
                 release()
             }
+        }else{
+            lastState = LastState.IDEL
+            isConnect = false
         }
     }
 
@@ -82,7 +85,9 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
 
             listener.onEvent(GattStatus.CONNECT_TO_SERVER, gatt?.device?.name)
             listener.onEvent(GattStatus.SEND_BLUE_NAME,"")
+            lastState = LastState.CONNECTED
         } else {
+            lastState = LastState.IDEL
             listener.onEvent(GattStatus.DISCONNECT_FROM_SERVER, gatt?.device?.name)
             gatt?.close()
         }

@@ -37,6 +37,7 @@ class ClientImpl() : AbsBle(), IBle {
         private const val MSG_RESPONSE_TIMEOUT = 2
         private const val MSG_CONNECT_TIMEOUT = 3
         private const val MSG_CONNECT_RETRY = 4
+        private const val MSG_SEND_NAME = 5
 
     }
     private var listener: IBle.IListener? = null
@@ -67,7 +68,9 @@ class ClientImpl() : AbsBle(), IBle {
         isScanning.set(true)
         pushLog("start scan")
         if (gattChar?.isConnected() == true) {
-            listener.onEvent(BleStatus.SERVER_CONNECTED, "server is connected,please disconnect first")
+           // listener.onEvent(BleStatus.SERVER_CONNECTED, "server is connected,please disconnect first")
+            //已经连上了
+            listener.onFail(BleError.SCAN_FAILED,"server is connected,please disconnect first")
             return
         }
 
@@ -107,6 +110,10 @@ class ClientImpl() : AbsBle(), IBle {
     override fun handleMessage(msg: Message) {
         super.handleMessage(msg)
         when(msg.what){
+            MSG_SEND_NAME->{
+                val name = bluetoothAdapter?.name ?: "null"
+                sendData(name.toByteArray(), NAME_TYPE,null)
+            }
             MSG_SEND_DATA->{
                 dataQueue.poll()?.let {
                     val ret = gattChar?.send(it)
@@ -206,8 +213,10 @@ class ClientImpl() : AbsBle(), IBle {
                     listener?.onEvent(BleStatus.SERVER_WRITE,obj)
                 }
                 GattStatus.SEND_BLUE_NAME ->{
-                    val name = bluetoothAdapter?.name?:"null"
-                    sendData(name.toByteArray(), NAME_TYPE,null)
+                    Message.obtain().apply {
+                        what = MSG_SEND_NAME
+                        handler?.sendMessageDelayed(this,300)
+                    }
                 }
                 GattStatus.MTU_CHANGE ->{
                     dataLen = obj?.toInt()?:DEFAULT_MTU

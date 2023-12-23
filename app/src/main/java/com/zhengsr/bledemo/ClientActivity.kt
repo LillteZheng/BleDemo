@@ -122,7 +122,7 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
                         appInfo("服务端写入数据：$obj")
                     }
                     BleStatus.SCAN_FAILED->{
-                        appInfo("扫描失败：请重新烧苗 ")
+                        appInfo("扫描失败：请重新扫描 ")
                     }
 
                     else -> {}

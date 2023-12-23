@@ -13,7 +13,9 @@ enum class BleError {
     BLUETOOTH_NOT_OPEN,
     PERMISSION_DENIED,
     GPS_NOT_OPEN,
-    CONNECT_TIMEOUT
+    CONNECT_TIMEOUT,
+    SCAN_FAILED
+
 }
 enum class DataError{
     NO_RESPONSE,
