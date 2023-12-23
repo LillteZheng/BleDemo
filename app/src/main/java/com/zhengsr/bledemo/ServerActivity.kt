@@ -53,7 +53,7 @@ class ServerActivity : AppCompatActivity() {
 
         val builder = BleOption.Builder()
             .context(this)
-            .name("Vieunite_kunkun")
+            .name("Vieunite_aikun")
             .logListener(object: BleOption.ILogListener{
                 override fun onLog(log: String) {
                     Log.d(TAG, "$log")
@@ -106,7 +106,7 @@ class ServerActivity : AppCompatActivity() {
 
     fun send(view: View) {
       //  Log.d(TAG, "zsr send: ${msg.length} ${msg.toByteArray().size}")
-     //   val msg = binding.editMsg.text.trim().toString()
+        val msg = binding.editMsg.text.trim().toString()
         BleServer.get().send(msg2.toByteArray(), object : IBle.IWrite {
 
             override fun onSuccess() {

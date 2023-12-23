@@ -25,6 +25,7 @@ class MainActivity :AppCompatActivity() {
             Manifest.permission.BLUETOOTH_CONNECT,
             Manifest.permission.BLUETOOTH_ADVERTISE,
             Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.BLUETOOTH_SCAN,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
         ), 1)
         if (bluetooth == null) {

@@ -55,6 +55,7 @@ class ClientImpl() : AbsBle(), IBle {
         connectFailCount = 0
         option = builder.builder
         //先关闭之前的连接
+        stopScan()
         gattChar?.release()
         this.listener = listener
         if (!checkPermission(option?.context,listener)) {

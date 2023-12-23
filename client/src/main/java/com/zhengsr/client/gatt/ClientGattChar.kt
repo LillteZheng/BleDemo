@@ -61,17 +61,6 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         }
     }
 
-    override fun onDescriptorWrite(
-        gatt: BluetoothGatt?,
-        descriptor: BluetoothGattDescriptor?,
-        status: Int
-    ) {
-        super.onDescriptorWrite(gatt, descriptor, status)
-        Log.d(
-            TAG,
-            "onDescriptorWrite() called with: gatt = $gatt, descriptor = $descriptor, status = $status"
-        )
-    }
 
 
 
@@ -82,10 +71,8 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         if (status == BluetoothGatt.GATT_SUCCESS) {
             //支持通知属性，当设置为true,onCharacteristicChanged 会回调
             gatt?.getService(UUID_SERVICE)?.getCharacteristic(UUID_READ_NOTIFY)?.let { char ->
-                Log.d(TAG, "zsr onServicesDiscovered: $char")
                 val isSuccess = gatt.setCharacteristicNotification(char, true)
                 val descriptor = char.getDescriptor(UUID_READ_DESCRIBE)
-                Log.d(TAG, "zsr onServicesDiscovered: $descriptor")
                 descriptor?.let {
                     it.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
                     gatt.writeDescriptor(it)
@@ -108,6 +95,30 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         gatt?.discoverServices()
         if (status == BluetoothGatt.GATT_SUCCESS) {
             listener.onEvent(GattStatus.MTU_CHANGE, mtu.toString())
+        }
+    }
+
+    override fun onCharacteristicChanged(
+        gatt: BluetoothGatt?,
+        characteristic: BluetoothGattCharacteristic?
+    ) {
+        super.onCharacteristicChanged(gatt, characteristic)
+        characteristic?.let {
+            val value = it.value
+            if (dataPackage == null) {
+                dataPackage = DataPackage(FORMAT_LEN)
+            }
+            dataPackage?.formData(value, object : DataPackage.IPackageListener {
+                override fun onResult(type: Byte, data: ByteArray) {
+                    val status = when (type) {
+                        //MTU_TYPE-> GattStatus.MTU_CHANGE
+                        NAME_TYPE -> GattStatus.SEND_BLUE_NAME
+                        else -> GattStatus.NORMAL_DATA
+                    }
+                    listener.onEvent(status, String(data))
+                }
+
+            })
         }
     }
 

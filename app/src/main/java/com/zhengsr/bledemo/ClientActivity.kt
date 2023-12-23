@@ -103,6 +103,8 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
             .logListener(object : BleOption.ILogListener {
                 override fun onLog(log: String) {
                     Log.d(TAG, log)
+
+                    //appInfo(log)
                 }
 
             }).build()
@@ -142,7 +144,7 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
     }
 
     fun writeData(view: View) {
-      //  val msg = binding.edit.text.toString().trim()
+        val msg = binding.edit.text.toString().trim()
         BleClient.get().send(msg.toByteArray(), object : IBle.IWrite {
             override fun onSuccess() {
                 appInfo("发送成功")
