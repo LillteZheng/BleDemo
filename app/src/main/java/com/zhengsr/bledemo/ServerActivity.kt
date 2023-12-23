@@ -2,6 +2,11 @@ package com.zhengsr.bledemo
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothDevice
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -34,8 +39,16 @@ class ServerActivity : AppCompatActivity() {
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             ), 1)
 
+        IntentFilter().apply {
+            addAction(BluetoothDevice.ACTION_NAME_CHANGED)
+            addAction(BluetoothDevice.ACTION_ALIAS_CHANGED)
+            registerReceiver(object : BroadcastReceiver() {
+                override fun onReceive(p0: Context?, p1: Intent?) {
+                    Log.d("TAG", "zsr onReceive: ")
+                }
 
-
+            },this)
+        }
 
         //在 Android 10 还需要开启 gps,搜索才需要
      /*   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -53,7 +66,7 @@ class ServerActivity : AppCompatActivity() {
 
         val builder = BleOption.Builder()
             .context(this)
-            .name("Vieunite_aikun")
+            .name("Vieunite_愿宝宝")
             .logListener(object: BleOption.ILogListener{
                 override fun onLog(log: String) {
                     Log.d(TAG, "$log")

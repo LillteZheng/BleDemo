@@ -29,6 +29,7 @@ internal class Serverlmpl : AbsBle(), IBle {
         private const val MSG_RESTART_AD = 0x02
         private const val MSG_SEND_DATA = 0x03
         private const val MSG_RESPONSE_TIMEOUT = 0x04
+        private const val MSG_BLUE_CONFIG_FAIL = 0x05
         private const val TIME_OUT = 1000L
     }
 
@@ -59,13 +60,19 @@ internal class Serverlmpl : AbsBle(), IBle {
             initHandle()
         }
         closeServer()
-        //开启广播
-        if (bleAdvServer == null) {
-            bleAdvServer = BleAdvServer(bluetoothAdapter!!)
-        }
         bluetoothAdapter?.name = option?.name
-        bleAdvServer?.startBroadcast(advertiseCallback)
-        pushLog("start advertise")
+        //由于第一次修改蓝牙名称，系统没有那么快响应，监听广播也不是特别靠谱，所以这里通过校准的方式
+        if (getBlueName() == option?.name){
+            //开启广播
+            if (bleAdvServer == null) {
+                bleAdvServer = BleAdvServer(bluetoothAdapter!!)
+            }
+            bleAdvServer?.startBroadcast(advertiseCallback)
+        }else{
+            handler?.removeMessages(MSG_BLUE_CONFIG_FAIL)
+            handler?.sendEmptyMessageDelayed(MSG_BLUE_CONFIG_FAIL,200)
+        }
+        pushLog("start advertise: ${getBlueName()}")
 
     }
 
@@ -78,6 +85,17 @@ internal class Serverlmpl : AbsBle(), IBle {
                     mag as String
                 } ?: "null"
                 listener?.onEvent(BleStatus.CLIENT_CONNECTED, name)
+            }
+            MSG_BLUE_CONFIG_FAIL->{
+                if (getBlueName() == option?.name){
+                    //开启广播
+                    if (bleAdvServer == null) {
+                        bleAdvServer = BleAdvServer(bluetoothAdapter!!)
+                    }
+                    bleAdvServer?.startBroadcast(advertiseCallback)
+                }else{
+                    handler?.sendEmptyMessageDelayed(MSG_BLUE_CONFIG_FAIL,200)
+                }
             }
 
             MSG_RESTART_AD -> {

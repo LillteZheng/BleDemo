@@ -139,6 +139,7 @@ abstract class AbsBle{
 
 
 
+    protected fun getBlueName() = bluetoothAdapter?.name?:""
 
 
 
