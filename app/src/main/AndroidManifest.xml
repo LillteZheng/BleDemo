@@ -22,7 +22,7 @@
         android:theme="@style/Theme.BleDemo"
         tools:targetApi="31">
         <activity
-            android:name=".ClientActivity"
+            android:name="com.excshare.bledemo.ClientActivity"
             android:exported="false"
             android:launchMode="singleTask"/>
         <activity

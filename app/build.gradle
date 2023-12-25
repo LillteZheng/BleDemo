@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.zhengsr.bledemo'
+    namespace 'com.excshare.bledemo'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.zhengsr.bledemo"
+        applicationId "com.excshare.bledemo"
         minSdk 21
         targetSdk 34
         versionCode 1
