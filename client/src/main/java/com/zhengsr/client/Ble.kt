@@ -14,7 +14,8 @@ enum class BleError {
     PERMISSION_DENIED,
     GPS_NOT_OPEN,
     CONNECT_TIMEOUT,
-    SCAN_FAILED
+    SCAN_FAILED,
+    PACKAGE_MISS
 
 }
 enum class DataError{
@@ -39,6 +40,7 @@ enum class GattStatus{
     MTU_CHANGE,
     WRITE_RESPONSE,
     CONNECT_FAIL,
+    INCOMPLETE_DATA,
     LOG
 }
 

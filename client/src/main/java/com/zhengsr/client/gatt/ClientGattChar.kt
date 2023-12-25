@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.os.Build
+import android.os.Handler
 import android.util.Log
 import com.zhengsr.client.GattStatus
 import com.zhengsr.client.LastState
@@ -23,7 +24,7 @@ import com.zhengsr.common.UUID_WRITE
  * @author by zhengshaorui 2023/12/14
  * describe：
  */
-class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "client") {
+class ClientGattChar(listener: IGattListener,val handler: Handler?) : AbsCharacteristic(listener, "client") {
 
     private var dataPackage: DataPackage? = null
     private var blueGatt: BluetoothGatt? = null
@@ -111,43 +112,29 @@ class ClientGattChar(listener: IGattListener) : AbsCharacteristic(listener, "cli
         characteristic?.let {
             val value = it.value
             if (dataPackage == null) {
-                dataPackage = DataPackage(FORMAT_LEN)
+                dataPackage = DataPackage(FORMAT_LEN,handler)
             }
             dataPackage?.formData(value, object : DataPackage.IPackageListener {
-                override fun onResult(type: Byte, data: ByteArray) {
+
+
+                override fun onResult(type: Byte, data: ByteArray, missPackages: List<Int>?) {
                     val status = when (type) {
                         //MTU_TYPE-> GattStatus.MTU_CHANGE
                         NAME_TYPE -> GattStatus.SEND_BLUE_NAME
                         else -> GattStatus.NORMAL_DATA
                     }
-                    listener.onEvent(status, String(data))
+                    if (!missPackages.isNullOrEmpty()){
+                        listener.onDataMiss(status, String(data),missPackages)
+                    }else{
+                        listener.onEvent(status, String(data))
+                    }
                 }
 
             })
         }
     }
 
-    override fun onCharacteristicChanged(
-        gatt: BluetoothGatt,
-        characteristic: BluetoothGattCharacteristic,
-        value: ByteArray
-    ) {
-        super.onCharacteristicChanged(gatt, characteristic, value)
-        if (dataPackage == null) {
-            dataPackage = DataPackage(FORMAT_LEN)
-        }
-        dataPackage?.formData(value, object : DataPackage.IPackageListener {
-            override fun onResult(type: Byte, data: ByteArray) {
-                val status = when (type) {
-                    //MTU_TYPE-> GattStatus.MTU_CHANGE
-                    NAME_TYPE -> GattStatus.SEND_BLUE_NAME
-                    else -> GattStatus.NORMAL_DATA
-                }
-                listener.onEvent(status, String(data))
-            }
 
-        })
-    }
 
     override fun onCharacteristicWrite(
         gatt: BluetoothGatt?,

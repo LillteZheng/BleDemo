@@ -95,7 +95,7 @@ class ClientImpl() : AbsBle(), IBle {
         blueDev = dev
       //  dev.connectGatt(BleSdk.context!!,autoConnect,)
         if (gattChar == null) {
-            gattChar = ClientGattChar(gattListener)
+            gattChar = ClientGattChar(gattListener,handler)
         }
         pushLog("connect to ${dev.name}")
         gattChar?.connectGatt(option?.context!!,dev)
@@ -237,6 +237,11 @@ class ClientImpl() : AbsBle(), IBle {
                     pushLog("status: $status,obj:$obj")
                 }
             }
+        }
+
+        override fun onDataMiss(status: GattStatus, obj: String?, missData: List<Int>?) {
+            val msg = obj ?: "null"
+            listener?.onFail(BleError.PACKAGE_MISS, msg,missData)
         }
 
     }

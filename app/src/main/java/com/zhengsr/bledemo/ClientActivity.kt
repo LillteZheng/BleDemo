@@ -136,15 +136,15 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
                 }
             }
 
-            override fun onFail(errorCode: BleError, msg: String) {
-                appInfo("errorCode = $errorCode, msg = $msg")
+            override fun onFail(errorCode: BleError, msg: String,obj:Any?) {
+                appInfo("errorCode = $errorCode, msg = $msg,obj= $obj")
             }
 
         })
     }
 
     fun writeData(view: View) {
-        val msg = binding.edit.text.toString().trim()
+      //  val msg = binding.edit.text.toString().trim()
         BleClient.get().send(msg.toByteArray(), object : IBle.IWrite {
             override fun onSuccess() {
                 appInfo("发送成功")
@@ -177,18 +177,7 @@ class ClientActivity : AppCompatActivity(), OnItemClickListener {
         BleClient.get().disconnect()
     }
 
-    private val msg2 = """
-        123344
-        So I’ve faced some issues with a BLE read, and here is the best summary I have:
 
-        “Receive String” works on a READ characteristic
-        “Receive Byte Array” returns on error on the exact same characteristic.
-        Here is my case, I can connect to a BLE device, and then read on a button click. 
-        Using a counter, I can alternative between the two reads. The read string version returns 
-        the data, but the Receive Byte array always flags an error. Ultimately, 
-        I need the Read Byte Array for my application, but I haven’t been able to debug 
-        the error difference between the calls.
-    """.trimIndent()
 
     private val msg = """
        

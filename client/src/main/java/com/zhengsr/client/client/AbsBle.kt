@@ -8,17 +8,14 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.os.Message
-import android.util.Log
 import androidx.core.util.forEach
 import androidx.core.util.size
 import com.zhengsr.client.BleError
 
 import com.zhengsr.common.BleUtil
 import com.zhengsr.common.DATA_FLAG
-import com.zhengsr.common.DataSpilt
 import com.zhengsr.common.VERSION
 import java.util.LinkedList
-import java.util.Queue
 
 /**
  * @author by zhengshaorui 2023/12/13

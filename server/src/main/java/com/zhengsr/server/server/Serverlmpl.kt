@@ -223,6 +223,11 @@ internal class Serverlmpl : AbsBle(), IBle {
                     }
                 }
 
+                override fun onDataMiss(status: GattStatus, obj: String?, missData: List<Int>?) {
+                    val msg = obj ?: "null"
+                    listener?.onFail(BleError.PACKAGE_MISS, msg,missData)
+                }
+
             })
         }
         gattServer?.startGattService(option?.context!!, option!!)
@@ -289,6 +294,8 @@ internal class Serverlmpl : AbsBle(), IBle {
 
         dataQueue.clear()
         subData(data, DATA_TYPE,mtu,dataQueue)
+        //todo 临时处理
+        dataQueue.removeAt(dataQueue.size-1)
         pushLog("send data size: ${dataQueue.size}")
         handler?.removeMessages(MSG_SEND_DATA)
         handler?.sendEmptyMessage(MSG_SEND_DATA)

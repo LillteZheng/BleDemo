@@ -14,6 +14,7 @@ enum class BleError {
     PERMISSION_DENIED,
     NAME_TOO_LONG,
     ADVERTISE_FAILED,
+    PACKAGE_MISS
 }
 
 enum class BleStatus{
@@ -29,7 +30,7 @@ enum class GattStatus{
     CLIENT_DISCONNECTED,
     MTU_CHANGE,
     WRITE_RESPONSE,
-
+    INCOMPLETE_DATA,
     BLUE_NAME,
     LOG
 }

@@ -17,6 +17,7 @@ abstract class AbsCharacteristic(val listener: IGattListener, tag: String) :
 
     open interface IGattListener {
         fun onEvent(status: GattStatus, obj: String?)
+        fun onDataMiss(status: GattStatus, obj: String?,missData:List<Int>?)
     }
 
 

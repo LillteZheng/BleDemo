@@ -137,14 +137,18 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener, "ser
                 dataPackage = DataPackage(FORMAT_LEN)
             }
             dataPackage?.formData(it, object : DataPackage.IPackageListener {
-                override fun onResult(type: Byte, data: ByteArray) {
-                    val status = when(type){
+
+                override fun onResult(type: Byte, data: ByteArray, missPackages: List<Int>?) {
+                    val status = when (type) {
                         //MTU_TYPE-> GattStatus.MTU_CHANGE
                         NAME_TYPE -> GattStatus.BLUE_NAME
                         else -> GattStatus.WRITE_RESPONSE
                     }
-                    listener.onEvent(status, String(data))
-
+                    if (!missPackages.isNullOrEmpty()){
+                        listener.onDataMiss(GattStatus.INCOMPLETE_DATA, String(data),missPackages)
+                    }else {
+                        listener.onEvent(status, String(data))
+                    }
                 }
 
             })

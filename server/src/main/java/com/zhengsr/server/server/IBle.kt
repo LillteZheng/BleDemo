@@ -17,7 +17,7 @@ interface IBle {
     fun release()
 
     interface IListener {
-        fun onFail(error: BleError, errorMsg:String)
+        fun onFail(error: BleError, errorMsg:String,obj:Any?=null)
         fun onEvent(status: BleStatus, obj: String?)
     }
     interface IWrite {

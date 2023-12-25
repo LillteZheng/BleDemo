@@ -15,6 +15,7 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.zhengsr.bledemo.databinding.ActivityServerBinding
+import com.zhengsr.server.BleError
 import com.zhengsr.server.server.BleOption
 import com.zhengsr.server.BleServer
 import com.zhengsr.server.BleStatus
@@ -66,7 +67,7 @@ class ServerActivity : AppCompatActivity() {
 
         val builder = BleOption.Builder()
             .context(this)
-            .name("Vieunite_愿宝宝")
+            .name("Vieunite_chuan")
             .logListener(object: BleOption.ILogListener{
                 override fun onLog(log: String) {
                     Log.d(TAG, "$log")
@@ -75,8 +76,10 @@ class ServerActivity : AppCompatActivity() {
 
 
         BleServer.get().startServer(builder, object : com.zhengsr.server.server.IBle.IListener {
-            override fun onFail(error: com.zhengsr.server.BleError, errorMsg: String) {
-                appInfo("失败: error = $error, errorMsg = $errorMsg")
+
+
+            override fun onFail(error: BleError, errorMsg: String, obj: Any?) {
+                appInfo("失败: error = $error, errorMsg = $errorMsg,obj= $obj")
             }
 
             override fun onEvent(status: BleStatus, obj: String?) {
@@ -119,7 +122,7 @@ class ServerActivity : AppCompatActivity() {
 
     fun send(view: View) {
       //  Log.d(TAG, "zsr send: ${msg.length} ${msg.toByteArray().size}")
-        val msg = binding.editMsg.text.trim().toString()
+     //   val msg = binding.editMsg.text.trim().toString()
         BleServer.get().send(msg2.toByteArray(), object : IBle.IWrite {
 
             override fun onSuccess() {
