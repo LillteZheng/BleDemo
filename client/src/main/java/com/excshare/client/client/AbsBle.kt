@@ -11,9 +11,11 @@ import android.os.Message
 import androidx.core.util.forEach
 import androidx.core.util.size
 import com.excshare.client.BleError
-import com.excshare.common.BleUtil
-import com.excshare.common.DATA_FLAG
-import com.excshare.common.VERSION
+import com.excshare.client.DATA_FLAG
+import com.excshare.client.VERSION
+import com.excshare.client.isBleSupport
+import com.excshare.client.isHasBlePermission
+import com.excshare.client.subpackage
 import java.util.LinkedList
 
 /**
@@ -22,7 +24,7 @@ import java.util.LinkedList
  */
 abstract class AbsBle {
     companion object {
-        private const val WAIT_TIME = 110L
+        private const val WAIT_TIME = 1000L
     }
     //默认100
     protected var waitResponseTime = WAIT_TIME
@@ -67,7 +69,7 @@ abstract class AbsBle {
             return false
         }
 
-        if (!BleUtil.isBleSupport(context)) {
+        if (!isBleSupport(context)) {
             listener.onFail(BleError.BLE_NOT_SUPPORT, "bluetooth not support")
             return false
         }
@@ -75,7 +77,7 @@ abstract class AbsBle {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 
-            if (!BleUtil.isHasBlePermission(context)) {
+            if (!isHasBlePermission(context)) {
                 val msg =
                     "BLUETOOTH_ADVERTISE | BLUETOOTH_CONNECT"
 
@@ -119,7 +121,7 @@ abstract class AbsBle {
      * version : 1 byte
      */
     fun subData(data: ByteArray, type: Byte, mtu: Int,queue: LinkedList<ByteArray>) {
-        val spiltData = BleUtil.subpackage(data, mtu)
+        val spiltData = subpackage(data, mtu)
         spiltData.forEach { index, bytes ->
             //格式+数据
             //第一个包，包含所有的标志位

@@ -8,15 +8,14 @@ import android.bluetooth.BluetoothGattServer
 import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.os.Handler
 import android.util.Log
-import com.excshare.common.DataPackage
-import com.excshare.common.FORMAT_LEN
-import com.excshare.common.NAME_TYPE
-import com.excshare.common.UUID_READ_DESCRIBE
-import com.excshare.common.UUID_READ_NOTIFY
-import com.excshare.common.UUID_SERVICE
-import com.excshare.common.UUID_WRITE_DESCRIBE
 import com.excshare.server.GattStatus
+import com.excshare.server.NAME_TYPE
+import com.excshare.server.UUID_READ_DESCRIBE
+import com.excshare.server.UUID_READ_NOTIFY
+import com.excshare.server.UUID_SERVICE
+import com.excshare.server.UUID_WRITE_DESCRIBE
 import com.excshare.server.server.BleOption
 import java.util.UUID
 
@@ -25,11 +24,10 @@ import java.util.UUID
  * @author by zhengshaorui 2023/12/13
  * describe：Gatt 服务
  */
-class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener, "server") {
+class ServerGattChar(handler: Handler?,listener: IGattListener) : AbsCharacteristic(handler,listener, "server") {
     private var bluetoothGattServer: BluetoothGattServer? = null
     private var gattService: BluetoothGattService? = null
     private var connectDevice: BluetoothDevice? = null
-    private var dataPackage: DataPackage? = null
     fun startGattService(context: Context, builder: BleOption.Builder) {
         val readNotifyChar = BluetoothGattCharacteristic(
             builder.readAndNotifyUuid,
@@ -131,27 +129,29 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener, "ser
             device, requestId,
             BluetoothGatt.GATT_SUCCESS, offset, "2".toByteArray()
         )
-        value?.let {
-            //packetData(value)
-            if (dataPackage == null) {
-                dataPackage = DataPackage(FORMAT_LEN)
-            }
-            dataPackage?.formData(it, object : DataPackage.IPackageListener {
+        handler?.post {
+            value?.let { formData(it) }
+        }
 
-                override fun onResult(type: Byte, data: ByteArray, missPackages: List<Int>?) {
-                    val status = when (type) {
-                        //MTU_TYPE-> GattStatus.MTU_CHANGE
-                        NAME_TYPE -> GattStatus.BLUE_NAME
-                        else -> GattStatus.WRITE_RESPONSE
-                    }
-                    if (!missPackages.isNullOrEmpty()){
-                        listener.onDataMiss(GattStatus.INCOMPLETE_DATA, String(data),missPackages)
-                    }else {
-                        listener.onEvent(status, String(data))
-                    }
-                }
+    }
 
-            })
+
+
+    override fun onPackageResult(type: Byte, data: ByteArray, missPackages: List<Int>?) {
+        super.onPackageResult(type, data, missPackages)
+        Log.d(
+            TAG,
+            "onPackageResult() called with: type = $type, data = $data, missPackages = $missPackages"
+        )
+        val status = when (type) {
+            //MTU_TYPE-> GattStatus.MTU_CHANGE
+            NAME_TYPE -> GattStatus.BLUE_NAME
+            else -> GattStatus.WRITE_RESPONSE
+        }
+        if (!missPackages.isNullOrEmpty()){
+            listener.onDataMiss(GattStatus.INCOMPLETE_DATA, String(data),missPackages)
+        }else {
+            listener.onEvent(status, String(data))
         }
     }
 
@@ -172,7 +172,7 @@ class ServerGattChar(listener: IGattListener) : AbsCharacteristic(listener, "ser
     fun release() {
         Log.d(TAG, "release: $connectDevice")
         try {
-            dataPackage?.resetBuffer()
+            resetBuffer()
             connectDevice?.let {
                 bluetoothGattServer?.cancelConnection(it)
             }

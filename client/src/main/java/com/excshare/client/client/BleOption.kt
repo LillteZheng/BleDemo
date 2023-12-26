@@ -1,9 +1,9 @@
 package com.excshare.client.client
 
 import android.content.Context
-import com.excshare.common.UUID_READ_NOTIFY
-import com.excshare.common.UUID_SERVICE
-import com.excshare.common.UUID_WRITE
+import com.excshare.client.UUID_READ_NOTIFY
+import com.excshare.client.UUID_SERVICE
+import com.excshare.client.UUID_WRITE
 import java.util.UUID
 
 /**

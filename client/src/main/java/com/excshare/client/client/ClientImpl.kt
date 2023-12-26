@@ -9,15 +9,15 @@ import android.os.Build
 import android.os.Message
 import com.excshare.client.BleError
 import com.excshare.client.BleStatus
+import com.excshare.client.DATA_TYPE
 import com.excshare.client.DataError
+import com.excshare.client.FORMAT_LEN
 import com.excshare.client.GattStatus
+import com.excshare.client.NAME_TYPE
 import com.excshare.client.ScanBeacon
 import com.excshare.client.gatt.AbsCharacteristic
 import com.excshare.client.gatt.ClientGattChar
-import com.excshare.common.BleUtil
-import com.excshare.common.DATA_TYPE
-import com.excshare.common.FORMAT_LEN
-import com.excshare.common.NAME_TYPE
+import com.excshare.client.isGpsOpen
 import java.util.LinkedList
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -94,7 +94,7 @@ class ClientImpl() : AbsBle(), IBle {
         blueDev = dev
       //  dev.connectGatt(BleSdk.context!!,autoConnect,)
         if (gattChar == null) {
-            gattChar = ClientGattChar(gattListener,handler)
+            gattChar = ClientGattChar(handler,gattListener)
         }
         pushLog("connect to ${dev.name}")
         gattChar?.connectGatt(option?.context!!,dev)
@@ -293,7 +293,7 @@ class ClientImpl() : AbsBle(), IBle {
             return false
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if (!BleUtil.isGpsOpen(context)) {
+            if (!isGpsOpen(context)) {
                 listener.onFail(BleError.GPS_NOT_OPEN, "gps not open")
                 return   false
             }

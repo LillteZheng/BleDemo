@@ -9,28 +9,26 @@ import android.content.Context
 import android.os.Build
 import android.os.Handler
 import android.util.Log
+import com.excshare.client.FORMAT_LEN
 import com.excshare.client.GattStatus
 import com.excshare.client.LastState
-import com.excshare.common.DataPackage
-import com.excshare.common.FORMAT_LEN
-import com.excshare.common.NAME_TYPE
-import com.excshare.common.UUID_READ_DESCRIBE
-import com.excshare.common.UUID_READ_NOTIFY
-import com.excshare.common.UUID_SERVICE
-import com.excshare.common.UUID_WRITE
+import com.excshare.client.NAME_TYPE
+import com.excshare.client.UUID_READ_DESCRIBE
+import com.excshare.client.UUID_READ_NOTIFY
+import com.excshare.client.UUID_SERVICE
+import com.excshare.client.UUID_WRITE
 
 
 /**
  * @author by zhengshaorui 2023/12/14
  * describe：
  */
-class ClientGattChar(listener: IGattListener,val handler: Handler?) : AbsCharacteristic(listener, "client") {
+class ClientGattChar(handler: Handler?,listener: IGattListener) : AbsCharacteristic(handler,listener, "client") {
 
-    private var dataPackage: DataPackage? = null
     private var blueGatt: BluetoothGatt? = null
     private var lastState = LastState.IDEL
     fun connectGatt(context: Context, dev: BluetoothDevice) {
-        dataPackage?.resetBuffer()
+        resetBuffer()
         lastState = LastState.CONNECTING
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             dev.connectGatt(
@@ -111,29 +109,24 @@ class ClientGattChar(listener: IGattListener,val handler: Handler?) : AbsCharact
         super.onCharacteristicChanged(gatt, characteristic)
         characteristic?.let {
             val value = it.value
-            if (dataPackage == null) {
-                dataPackage = DataPackage(FORMAT_LEN,handler)
-            }
-            dataPackage?.formData(value, object : DataPackage.IPackageListener {
+            formData(value)
 
-
-                override fun onResult(type: Byte, data: ByteArray, missPackages: List<Int>?) {
-                    val status = when (type) {
-                        //MTU_TYPE-> GattStatus.MTU_CHANGE
-                        NAME_TYPE -> GattStatus.SEND_BLUE_NAME
-                        else -> GattStatus.NORMAL_DATA
-                    }
-                    if (!missPackages.isNullOrEmpty()){
-                        listener.onDataMiss(status, String(data),missPackages)
-                    }else{
-                        listener.onEvent(status, String(data))
-                    }
-                }
-
-            })
         }
     }
 
+    override fun onPackageResult(type: Byte, data: ByteArray, missPackages: List<Int>?) {
+        super.onPackageResult(type, data, missPackages)
+        val status = when (type) {
+            //MTU_TYPE-> GattStatus.MTU_CHANGE
+            NAME_TYPE -> GattStatus.SEND_BLUE_NAME
+            else -> GattStatus.NORMAL_DATA
+        }
+        if (!missPackages.isNullOrEmpty()){
+            listener.onDataMiss(status, String(data),missPackages)
+        }else{
+            listener.onEvent(status, String(data))
+        }
+    }
 
 
     override fun onCharacteristicWrite(
@@ -182,7 +175,7 @@ class ClientGattChar(listener: IGattListener,val handler: Handler?) : AbsCharact
             it.close()
             it.disconnect()
         }
-        dataPackage?.resetBuffer()
+        resetBuffer()
         blueGatt = null
     }
 }

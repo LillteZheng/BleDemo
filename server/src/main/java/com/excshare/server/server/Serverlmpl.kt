@@ -5,10 +5,10 @@ import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
 import android.os.Message
-import com.excshare.common.DATA_TYPE
-import com.excshare.common.FORMAT_LEN
 import com.excshare.server.BleError
 import com.excshare.server.BleStatus
+import com.excshare.server.DATA_TYPE
+import com.excshare.server.FORMAT_LEN
 import com.excshare.server.GattStatus
 import com.excshare.server.gatt.AbsCharacteristic
 import com.excshare.server.gatt.ServerGattChar
@@ -30,7 +30,7 @@ internal class Serverlmpl : AbsBle(), IBle {
         private const val MSG_SEND_DATA = 0x03
         private const val MSG_RESPONSE_TIMEOUT = 0x04
         private const val MSG_BLUE_CONFIG_FAIL = 0x05
-        private const val TIME_OUT = 1000L
+        private const val TIME_OUT = 2000L
     }
 
     private var listener: IBle.IListener? = null
@@ -174,7 +174,7 @@ internal class Serverlmpl : AbsBle(), IBle {
     private fun startGattService() {
         pushLog("start gatt service: $gattServer")
         if (gattServer == null) {
-            gattServer = ServerGattChar(object : AbsCharacteristic.IGattListener {
+            gattServer = ServerGattChar(handler,object : AbsCharacteristic.IGattListener {
 
                 override fun onEvent(status: GattStatus, obj: String?) {
                     pushLog("server status change:$status")
@@ -295,7 +295,7 @@ internal class Serverlmpl : AbsBle(), IBle {
         dataQueue.clear()
         subData(data, DATA_TYPE,mtu,dataQueue)
         //todo 临时处理
-        dataQueue.removeAt(dataQueue.size-1)
+      //  dataQueue.removeAt(dataQueue.size-1)
         pushLog("send data size: ${dataQueue.size}")
         handler?.removeMessages(MSG_SEND_DATA)
         handler?.sendEmptyMessage(MSG_SEND_DATA)

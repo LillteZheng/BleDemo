@@ -10,10 +10,12 @@ import android.os.Looper
 import android.os.Message
 import androidx.core.util.forEach
 import androidx.core.util.size
-import com.excshare.common.BleUtil
-import com.excshare.common.DATA_FLAG
-import com.excshare.common.VERSION
 import com.excshare.server.BleError
+import com.excshare.server.DATA_FLAG
+import com.excshare.server.VERSION
+import com.excshare.server.isBleSupport
+import com.excshare.server.isHasBlePermission
+import com.excshare.server.subpackage
 
 import java.util.LinkedList
 
@@ -62,7 +64,7 @@ abstract class AbsBle{
             return false
         }
 
-        if (!BleUtil.isBleSupport(context)) {
+        if (!isBleSupport(context)) {
             listener.onFail(BleError.BLE_NOT_SUPPORT,"bluetooth not support")
             return false
         }
@@ -70,7 +72,7 @@ abstract class AbsBle{
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 
-            if (!BleUtil.isHasBlePermission(context)){
+            if (!isHasBlePermission(context)){
                 val msg =
                     "BLUETOOTH_ADVERTISE | BLUETOOTH_CONNECT"
 
@@ -106,7 +108,7 @@ abstract class AbsBle{
      * version : 1 byte
      */
     fun subData(data: ByteArray, type: Byte, mtu: Int,queue: LinkedList<ByteArray>) {
-        val spiltData = BleUtil.subpackage(data, mtu)
+        val spiltData = subpackage(data, mtu)
         spiltData.forEach { index, bytes ->
             //格式+数据
             //第一个包，包含所有的标志位
