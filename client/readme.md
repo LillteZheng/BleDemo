@@ -18,6 +18,14 @@ val bluetooth = BluetoothAdapter.getDefaultAdapter()
                 startActivityForResult(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE),1)
             }
         }
+
+//在 Android 10 还需要开启 gps
+if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+    val lm: LocationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)){
+        Toast.makeText(this, "请您先开启gps,否则蓝牙不可用", Toast.LENGTH_SHORT).show()
+    }
+}
 ```
 
 ## 2. 配置
@@ -36,7 +44,7 @@ val bluetooth = BluetoothAdapter.getDefaultAdapter()
 
 ## 3. 开始扫描
 ```kotlin
-        BleClient.get().startScan(option,object : IBle.IListener {
+BleClient.get().startScan(option,object : IBle.IListener {
     override fun onEvent(status: BleStatus, obj: String?) {
         when(status){
 
@@ -50,7 +58,7 @@ val bluetooth = BluetoothAdapter.getDefaultAdapter()
                 appInfo("服务端写入数据：$obj")
             }
             BleStatus.SCAN_FAILED->{
-                appInfo("扫描失败：请重新烧苗 ")
+                appInfo("扫描失败：请重新扫描 ")
             }
 
             else -> {}
@@ -64,8 +72,8 @@ val bluetooth = BluetoothAdapter.getDefaultAdapter()
         }
     }
 
-    override fun onFail(errorCode: BleError, msg: String) {
-        appInfo("errorCode = $errorCode, msg = $msg")
+    override fun onFail(errorCode: BleError, msg: String, obj:Any?) {
+        appInfo("errorCode = $errorCode, msg = $msg,obj= $obj")
     }
 
 })
@@ -82,10 +90,23 @@ onScanResult为扫描到的设备，可以通过beacon.name来判断是否是自
 
 ## 5. 发送数据
 ```kotlin
-   BleClient.get().send(msg2.toByteArray())
-```
-其中，msg2为需要发送的数据，回调还未处理，后续更新。
+BleClient.get().send(msg.toByteArray(), object : IBle.IWrite {
+    override fun onSuccess() {
+        appInfo("发送成功")
+    }
 
+    override fun onFail(dataError: DataError, errorMsg: String) {
+        appInfo("发送失败：$errorMsg")
+    }
+
+})
+```
+其中，msg为需要发送的数据，回调会在 onEvent 中回调。
+
+## 6. 是否连接
+```kotlin
+BleClient.get().isConnected()
+```
 
 ## 6. 断开服务器
 ```kotlin

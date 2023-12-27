@@ -30,7 +30,7 @@ android {
     }
 }
 
-/*task makeJar(type: Copy) {
+task makeJar(type: Copy) {
     //删除存在的
     delete 'build/libs/jarsdk.jar'
     //设置拷贝的文件
@@ -43,11 +43,11 @@ android {
     //（我们只关心classes.jar这个文件）
     include('classes.jar')
     //重命名
-    rename ('classes.jar', 'client.jar')
+    rename ('classes.jar', 'ExcBle-client.jar')
 }
 
 
-makeJar.dependsOn(build)*/
+makeJar.dependsOn(build)
 afterEvaluate {
     publishing {
         publications {

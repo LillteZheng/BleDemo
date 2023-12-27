@@ -42,13 +42,13 @@ internal class BleAdvServer(val bluetoothAdapter: BluetoothAdapter) {
             .build()
 
         /**
-         *  扫描广播数据（可不写，客户端扫描才发送，实际上，厂商数据两个，长度和类型各一个，实际可用数据为27
+         *  扫描广播数据（可不写，客户端扫描才发送）
          *  当广播被扫描到时，会发送扫描回复数据，这个数据可以自定义，但是长度不能超过31个字节
          */
 
         val scanResponse = AdvertiseData.Builder()
             //设置厂商数据
-            .addManufacturerData(0xff, byteArrayOf(1))
+            .addManufacturerData(0xff, byteArrayOf())
             .build()
         var bluetoothLeAdvertiser = bluetoothAdapter.bluetoothLeAdvertiser
         //开启广播,这个外设就开始发送广播了

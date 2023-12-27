@@ -1,8 +1,27 @@
 
 # 蓝牙服务端说明
 
-## 1.1 配置
+申请权限：
+```kotlin
+val bluetooth = BluetoothAdapter.getDefaultAdapter()
+        ActivityCompat.requestPermissions(this, arrayOf(
+            Manifest.permission.BLUETOOTH_ADMIN,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_ADVERTISE,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        ), 1)
+        if (bluetooth == null) {
+            Toast.makeText(this, "您的设备未找到蓝牙驱动！!", Toast.LENGTH_SHORT).show()
+            finish()
+        }else {
+            if (!bluetooth.isEnabled) {
+                startActivityForResult(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE),1)
+            }
+        }
+```
 
+## 1.1 配置
 ```kotlin
 
 val builder = BleOption.Builder()
@@ -72,6 +91,12 @@ BleServer.get().startServer(builder, object : com.zhengsr.server.server.IBle.ILi
 
 ```kotlin
  BleServer.get().cancelConnect(bluetoothDevice)
+```
+
+## 1.5 是否连接
+    
+```kotlin
+BleServer.get().isConnected(bluetoothDevice)
 ```
 
 ## 1.5 停止服务
