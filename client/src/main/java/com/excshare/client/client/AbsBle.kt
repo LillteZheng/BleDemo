@@ -138,8 +138,8 @@ abstract class AbsBle {
             val versionByte = VERSION.toByte() //版本号
 
 
-            val byte = byteArrayOf(DATA_FLAG, type, sizeHigh, sizeLow,
-                countHigh,countLow,indexHigh,indexLow,versionByte).plus(bytes)
+            val byte = byteArrayOf(versionByte,DATA_FLAG, type, sizeHigh, sizeLow,
+                countHigh,countLow,indexHigh,indexLow).plus(bytes)
             // listener.onResult(byte)
             queue.add(byte)
 

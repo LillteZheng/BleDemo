@@ -93,15 +93,13 @@ abstract class AbsCharacteristic(val handler: Handler?,val listener: IGattListen
 
 
     /**
-     * 0               8               16              24
+     *  0               8               16              24            31
      *  0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
      * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |      flag     |  packet_type  |         packet_length         |
+     * |    version    |      flag     |          total_length         |
      * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      * |             count             |             index             |
      * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |    version    |                                               |
-     * +-+-+-+-+-+-+-+-+                                               +
      * |                              data                             |
      * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      * flag: 0x78
@@ -118,12 +116,12 @@ abstract class AbsCharacteristic(val handler: Handler?,val listener: IGattListen
             if (value.size < formatLen) {
                 return
             }
-            val flag = value[0]
-            val type = value[1]
-            val len = ((value[2].toInt() shl 8) or (value[3].toInt() and 0xFF))
-            val count = ((value[4].toInt() shl 8) or (value[5].toInt() and 0xFF))
-            val index = ((value[6].toInt() shl 8) or (value[7].toInt() and 0xFF))
-            val version = value[8]
+            val version = value[0]
+            val flag = value[1]
+            val type = value[2]
+            val len = ((value[3].toInt() shl 8) or (value[4].toInt() and 0xFF))
+            val count = ((value[5].toInt() shl 8) or (value[6].toInt() and 0xFF))
+            val index = ((value[7].toInt() shl 8) or (value[8].toInt() and 0xFF))
             Log.d(
                 TAG,
                 "formData: flag = $flag ,type = $type ,len = $len ,buffer Len = ${buffer?.position()},count = $count ,index = $index ,version = $version"

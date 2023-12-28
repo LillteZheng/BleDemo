@@ -91,6 +91,9 @@ class ClientImpl() : AbsBle(), IBle {
      * 加重试机制
      */
     override fun connect(dev:BluetoothDevice){
+        if (handler == null) {
+            initHandle()
+        }
         blueDev = dev
       //  dev.connectGatt(BleSdk.context!!,autoConnect,)
         if (gattChar == null) {

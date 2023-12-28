@@ -100,12 +100,13 @@ abstract class AbsBle{
      * +-+-+-+-+-+-+-+-+                                               +
      * |                              data                             |
      * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * version : 1 byte
      * flag: 0x78
      * type: byte ，data，name
      * len: 2 byte
      * count : 2 byte ,ios mtu 最小是100，2byte 比较保险
      * index : 2 byte
-     * version : 1 byte
+     *
      */
     fun subData(data: ByteArray, type: Byte, mtu: Int,queue: LinkedList<ByteArray>) {
         val spiltData = subpackage(data, mtu)
@@ -125,8 +126,8 @@ abstract class AbsBle{
             val versionByte = VERSION.toByte() //版本号
 
 
-            val byte = byteArrayOf(DATA_FLAG, type, sizeHigh, sizeLow,
-                countHigh,countLow,indexHigh,indexLow,versionByte).plus(bytes)
+            val byte = byteArrayOf(versionByte,DATA_FLAG, type, sizeHigh, sizeLow,
+                countHigh,countLow,indexHigh,indexLow).plus(bytes)
             // listener.onResult(byte)
             queue.add(byte)
 
